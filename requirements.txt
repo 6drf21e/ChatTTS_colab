@@ -1,0 +1,2 @@
+cn2an
+pypinyin
