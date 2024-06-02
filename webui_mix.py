@@ -1,5 +1,7 @@
 import argparse
 import re
+import time
+
 import pandas
 import numpy as np
 from tqdm import tqdm
@@ -36,6 +38,8 @@ if not os.path.exists(SAVED_SEEDS_FILE):
         f.write("[]")
 
 chat = load_chat_tts_model(source=args.source, local_path=args.local_path)
+# chat = None
+# chat = load_chat_tts_model(source="local", local_path="models")
 
 # 抽卡的最大数量
 max_audio_components = 10
@@ -389,6 +393,284 @@ with gr.Blocks() as demo:
                 top_K_input,
             ],
             outputs=[output_audio]
+        )
+    with gr.Tab("角色扮演"):
+        def txt_2_script(text):
+            lines = text.split("\n")
+            data = []
+            for line in lines:
+                if not line.strip():
+                    continue
+                parts = line.split("::")
+                if len(parts) != 2:
+                    continue
+                data.append({
+                    "character": parts[0],
+                    "txt": parts[1]
+                })
+            return data
+
+
+        def script_2_txt(data):
+            assert isinstance(data, list)
+            result = []
+            for item in data:
+                txt = item['txt'].replace('\n', ' ')
+                result.append(f"{item['character']}::{txt}")
+            return "\n".join(result)
+
+
+        def get_characters(lines):
+            assert isinstance(lines, list)
+            characters = list([_["character"] for _ in lines])
+            unique_characters = list(dict.fromkeys(characters))
+            print([[character, 0] for character in unique_characters])
+            return [[character, 0] for character in unique_characters]
+
+
+        def get_txt_characters(text):
+            return get_characters(txt_2_script(text))
+
+
+        def llm_change(model):
+            llm_setting = {
+                "gpt-3.5-turbo-0125": ["https://api.openai.com/v1"],
+                "gpt-4o": ["https://api.openai.com/v1"],
+                "deepseek-chat": ["https://api.deepseek.com"],
+                "yi-large": ["https://api.lingyiwanwu.com/v1"]
+            }
+            if model in llm_setting:
+                return llm_setting[model][0]
+            else:
+                gr.Error("Model not found.")
+                return None
+
+
+        def ai_script_generate(model, api_base, api_key, text, progress=gr.Progress(track_tqdm=True)):
+            from llm_utils import llm_operation
+            from config import LLM_PROMPT
+            scripts = llm_operation(api_base, api_key, model, LLM_PROMPT, text, required_keys=["txt", "character"])
+            return script_2_txt(scripts)
+
+
+        def generate_script_audio(text, models_seeds, progress=gr.Progress()):
+            scripts = txt_2_script(text)  # 将文本转换为剧本
+            characters = get_characters(scripts)  # 从剧本中提取角色
+
+            #
+            import pandas as pd
+            from collections import defaultdict
+            import itertools
+            from tts_model import generate_audio_for_seed
+            from utils import combine_audio, save_audio, normalize_zh
+            from config import DEFAULT_BATCH_SIZE, DEFAULT_SPEED, DEFAULT_TEMPERATURE, DEFAULT_TOP_K, DEFAULT_TOP_P
+
+            assert isinstance(models_seeds, pd.DataFrame)
+
+            # 批次处理函数
+            def batch(iterable, batch_size):
+                it = iter(iterable)
+                while True:
+                    batch = list(itertools.islice(it, batch_size))
+                    if not batch:
+                        break
+                    yield batch
+
+            models_seeds = models_seeds.to_dict(orient='records')
+
+            # 检查每个角色是否都有对应的种子
+            for character, _ in characters:
+                if not any(seed['Character'] == character for seed in models_seeds):
+                    gr.Info(f"角色 {character} 没有种子，请先设置种子。")
+                    return None
+
+            # 将角色和对应的种子存为字典
+            character_seeds = {character: [seed['Seed'] for seed in models_seeds if seed['Character'] == character][0]
+                               for character, _ in characters}
+            # todo 可以自定义 最好是按角色
+            refine_text_prompt = "[oral_2][laugh_0][break_4]"
+            all_wavs = []
+
+            # 按角色分组，加速推理
+            grouped_lines = defaultdict(list)
+            for line in scripts:
+                grouped_lines[line["character"]].append(line)
+
+            batch_results = {character: [] for character in grouped_lines}
+
+            batch_size = 5  # 设置批次大小
+            # 按角色处理
+            for character, lines in progress.tqdm(grouped_lines.items(), desc="生成剧本音频"):
+                seed = character_seeds.get(character, 0)
+                # 按批次处理
+                for batch_lines in batch(lines, batch_size):
+                    texts = [normalize_zh(line["txt"]) for line in batch_lines]
+                    print(f"seed={seed} t={texts} c={character}")
+                    wavs = generate_audio_for_seed(chat, int(seed), texts, DEFAULT_BATCH_SIZE, DEFAULT_SPEED,
+                                                   refine_text_prompt, DEFAULT_TEMPERATURE, DEFAULT_TOP_P,
+                                                   DEFAULT_TOP_K, skip_save=True)  # 批量处理文本
+                    batch_results[character].extend(wavs)
+
+            # 转换回原排序
+            for line in scripts:
+                character = line["character"]
+                all_wavs.append(batch_results[character].pop(0))
+
+            # 合成所有音频
+            audio = combine_audio(all_wavs)
+            fname = f"script_{int(time.time())}.wav"
+            save_audio(fname, audio)
+            return fname
+
+
+        script_example = {
+            "lines": [{
+                "txt": "在一个风和日丽的下午，小红帽准备去森林里看望她的奶奶。",
+                "character": "旁白"
+            }, {
+                "txt": "小红帽说",
+                "character": "旁白"
+            }, {
+                "txt": "我要给奶奶带点好吃的。",
+                "character": "年轻女性"
+            }, {
+                "txt": "在森林里，小红帽遇到了狡猾的大灰狼。",
+                "character": "旁白"
+            }, {
+                "txt": "大灰狼说",
+                "character": "旁白"
+            }, {
+                "txt": "小红帽，你的篮子里装的是什么？",
+                "character": "中年男性"
+            }, {
+                "txt": "小红帽回答",
+                "character": "旁白"
+            }, {
+                "txt": "这是给奶奶的蛋糕和果酱。",
+                "character": "年轻女性"
+            }, {
+                "txt": "大灰狼心生一计，决定先到奶奶家等待小红帽。",
+                "character": "旁白"
+            }, {
+                "txt": "当小红帽到达奶奶家时，她发现大灰狼伪装成了奶奶。",
+                "character": "旁白"
+            }, {
+                "txt": "小红帽疑惑地问",
+                "character": "旁白"
+            }, {
+                "txt": "奶奶，你的耳朵怎么这么尖？",
+                "character": "年轻女性"
+            }, {
+                "txt": "大灰狼慌张地回答",
+                "character": "旁白"
+            }, {
+                "txt": "哦，这是为了更好地听你说话。",
+                "character": "中年男性"
+            }, {
+                "txt": "小红帽越发觉得不对劲，最终发现了大灰狼的诡计。",
+                "character": "旁白"
+            }, {
+                "txt": "她大声呼救，森林里的猎人听到后赶来救了她和奶奶。",
+                "character": "旁白"
+            }, {
+                "txt": "从此，小红帽再也没有单独进入森林，而是和家人一起去看望奶奶。",
+                "character": "旁白"
+            }]
+        }
+
+        ai_text_default = "武侠小说《花木兰大战周树人》 要符合人物背景"
+
+        with gr.Row(equal_height=True):
+            with gr.Column(scale=2):
+                gr.Markdown("### AI脚本")
+                gr.Markdown("""
+为确保生成效果稳定，仅支持与 GPT-4 相当的模型，推荐使用 4o yi-large deepseek。
+如果没有反应，请检查日志中的错误信息。如果提示格式错误，请重试几次。国内模型可能会受到风控影响，建议更换文本内容后再试。
+
+申请渠道（免费额度）：
+
+- [https://platform.deepseek.com/](https://platform.deepseek.com/)
+- [https://platform.lingyiwanwu.com/](https://platform.lingyiwanwu.com/)
+
+                """)
+                # 申请渠道
+
+                with gr.Row(equal_height=True):
+                    # 选择模型 只有 gpt4o deepseek-chat yi-large 三个选项
+                    model_select = gr.Radio(label="选择模型", choices=["gpt-4o", "deepseek-chat", "yi-large"],
+                                            value="gpt-4o", interactive=True, )
+                with gr.Row(equal_height=True):
+                    openai_api_base_input = gr.Textbox(label="OpenAI API Base URL",
+                                                       placeholder="请输入API Base URL",
+                                                       value=r"https://api.openai.com/v1")
+                    openai_api_key_input = gr.Textbox(label="OpenAI API Key", placeholder="请输入API Key",
+                                                      value="sk-xxxxxxx")
+                # AI提示词
+                ai_text_input = gr.Textbox(label="剧情简介或者一段故事", placeholder="请输入文本...", lines=2,
+                                           value=ai_text_default)
+
+                # 生成脚本的按钮
+                ai_script_generate_button = gr.Button("AI脚本生成")
+
+            with gr.Column(scale=3):
+                gr.Markdown("### 脚本")
+                gr.Markdown(
+                    "脚本可以手工编写也可以从右侧的AI脚本生成按钮生成。脚本格式 **角色::文本** 一行为一句” 注意是::")
+                script_text = "\n".join(
+                    [f"{_.get('character', '')}::{_.get('txt', '')}" for _ in script_example['lines']])
+
+                script_text_input = gr.Textbox(label="脚本格式 “角色::文本 一行为一句” 注意是::",
+                                               placeholder="请输入文本...",
+                                               lines=12, value=script_text)
+                script_translate_button = gr.Button("步骤①：提取角色")
+
+            with gr.Column(scale=1):
+                gr.Markdown("### 角色种子")
+                # DataFrame 来存放转换后的脚本
+                # 默认数据
+                default_data = [
+                    ["旁白", 2222],
+                    ["年轻女性", 2],
+                    ["中年男性", 2424]
+                ]
+
+                script_data = gr.DataFrame(
+                    value=default_data,
+                    label="角色对应的音色种子，从抽卡那获取",
+                    headers=["Character", "Seed"],
+                    datatype=["str", "number"],
+                    interactive=True,
+                    col_count=(2, "fixed"),
+                )
+                # 生视频按钮
+                script_generate_audio = gr.Button("步骤②：生成音频")
+        # 输出的脚本音频
+        script_audio = gr.Audio(label="AI生成的音频", interactive=False)
+
+        # 脚本相关事件
+        # 脚本转换
+        script_translate_button.click(
+            get_txt_characters,
+            inputs=[script_text_input],
+            outputs=script_data
+        )
+        # 处理模型切换
+        model_select.change(
+            llm_change,
+            inputs=[model_select],
+            outputs=[openai_api_base_input]
+        )
+        # AI脚本生成
+        ai_script_generate_button.click(
+            ai_script_generate,
+            inputs=[model_select, openai_api_base_input, openai_api_key_input, ai_text_input],
+            outputs=[script_text_input]
+        )
+        # 音频生成
+        script_generate_audio.click(
+            generate_script_audio,
+            inputs=[script_text_input, script_data],
+            outputs=[script_audio]
         )
 
 demo.launch(share=args.share)

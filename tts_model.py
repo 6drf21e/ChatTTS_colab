@@ -45,7 +45,7 @@ def deterministic(seed=0):
 
 
 def generate_audio_for_seed(chat, seed, texts, batch_size, speed, refine_text_prompt, temperature=DEFAULT_TEMPERATURE,
-                            top_P=DEFAULT_TOP_P, top_K=DEFAULT_TOP_K, cur_tqdm=None):
+                            top_P=DEFAULT_TOP_P, top_K=DEFAULT_TOP_K, cur_tqdm=None, skip_save=False):
     from utils import combine_audio, save_audio, batch_split
     # torch.manual_seed(seed)
     # top_P = 0.7,
@@ -85,7 +85,8 @@ def generate_audio_for_seed(chat, seed, texts, batch_size, speed, refine_text_pr
                           use_decoder=True, skip_refine_text=False)
         all_wavs.extend(wavs)
         clear_cuda_cache()
-
+    if skip_save:
+        return all_wavs
     combined_audio = combine_audio(all_wavs)
     end_time = time.time()
     elapsed_time = end_time - start_time
