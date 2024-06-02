@@ -12,7 +12,7 @@ import json
 from utils import combine_audio, save_audio, batch_split, normalize_zh
 from tts_model import load_chat_tts_model, clear_cuda_cache, deterministic, generate_audio_for_seed
 
-parser = argparse.ArgumentParser(description="Gradio Chat Application")
+parser = argparse.ArgumentParser(description="Gradio ChatTTS MIX")
 parser.add_argument("--source", type=str, default="huggingface", help="Model source: 'huggingface' or 'local'.")
 parser.add_argument("--local_path", type=str, help="Path to local model if source is 'local'.")
 parser.add_argument("--share", default=False, action="store_true", help="Share the server publicly.")

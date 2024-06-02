@@ -4,6 +4,14 @@
 
 基于 [ChatTTS](https://github.com/2noise/ChatTTS) 的 Colab 项目，可以在 Google Colab 上一键运行
 
+### 🚀整合包下载🚀
+
+**系统版本**: Windows 10 及以上
+
+**下载地址**: [百度网盘](https://pan.baidu.com/s/199imviwIB3ak_SFZRrQKjQ?pwd=ut3a) 
+
+**提取码**: ut3a
+
 ## 特点
 
 - **Colab 一键运行**：无需复杂的环境配置，只需点击上方的 Colab 按钮，即可在浏览器中直接运行项目。
