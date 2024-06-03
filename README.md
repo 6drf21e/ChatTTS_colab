@@ -1,10 +1,11 @@
 # ChatTTS_colab
 
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/6drf21e/ChatTTS_colab/blob/main/chattts_webui_mix.ipynb)
+### 在线版
+点击部署 => [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/6drf21e/ChatTTS_colab/blob/main/chattts_webui_mix.ipynb)
 
-基于 [ChatTTS](https://github.com/2noise/ChatTTS) 的 Colab 项目，可以在 Google Colab 上一键运行
+基于 [ChatTTS](https://github.com/2noise/ChatTTS) 的 Colab 项目，可以在 Google Colab 上一键运行，需要Google账号
 
-### 🚀整合包下载🚀
+### 离线版
 
 **系统版本**: Windows 10 及以上
 
