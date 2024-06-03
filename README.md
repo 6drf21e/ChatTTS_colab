@@ -1,17 +1,11 @@
 # ChatTTS_colab
 
-### 在线版
-点击部署 => [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/6drf21e/ChatTTS_colab/blob/main/chattts_webui_mix.ipynb)
+> 基于 [ChatTTS](https://github.com/2noise/ChatTTS) 的 Colab 项目，可以部署在Colab，亦可离线下载到本地部署。两者部署完后都可以打开一个网页访问ChatTTS服务。
 
-基于 [ChatTTS](https://github.com/2noise/ChatTTS) 的 Colab 项目，可以在 Google Colab 上一键运行，需要Google账号
-
-### 离线版
-
-**系统版本**: Windows 10 及以上
-
-**下载地址**: [百度网盘](https://pan.baidu.com/s/199imviwIB3ak_SFZRrQKjQ?pwd=ut3a) 
-
-**提取码**: ut3a
+|  版本   | 地址  | 介绍 |
+|  ----  | ---- | ---- |
+| 在线Colab版  | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/6drf21e/ChatTTS_colab/blob/main/chattts_webui_mix.ipynb) | 可以在 Google Colab 上一键运行，需要Google账号，每次部署能使用72h，Colib自带15GB的GPU  |
+| 离线整合版 | [百度网盘](https://pan.baidu.com/s/199imviwIB3ak_SFZRrQKjQ?pwd=ut3a) 提取码:ut3a | 下载到本地运行，本机配置较高推荐此方式，适用 Windows 10 及以上 |
 
 ## 特点
 
