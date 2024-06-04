@@ -17,14 +17,20 @@ def save_audio(file_name, audio, rate=24000):
     :param rate:
     :return:
     """
+    import os
+    from config import DEFAULT_DIR
     audio = (audio * 32767).astype(np.int16)
 
-    with wave.open(file_name, "w") as wf:
+    # 检查默认目录
+    if not os.path.exists(DEFAULT_DIR):
+        os.makedirs(DEFAULT_DIR)
+    full_path = os.path.join(DEFAULT_DIR, file_name)
+    with wave.open(full_path, "w") as wf:
         wf.setnchannels(1)
         wf.setsampwidth(2)
         wf.setframerate(rate)
         wf.writeframes(audio.tobytes())
-
+    return full_path
 
 def combine_audio(wavs):
     """
@@ -88,7 +94,7 @@ def remove_chinese_punctuation(text):
     :return:
     """
     chinese_punctuation_pattern = r"[：；！（），【】『』「」《》－‘“’”:,;!\(\)\[\]><\-]"
-    text = re.sub(chinese_punctuation_pattern, ' ', text)
+    text = re.sub(chinese_punctuation_pattern, '，', text)
     # 使用正则表达式将多个连续的句号替换为一个句号
     text = re.sub(r'。{2,}', '。', text)
     return text
@@ -139,7 +145,7 @@ def split_text(text, min_length=60):
     current_sentence = ''
     for sentence in sentences:
         if re.match(sentence_delimiters, sentence):
-            current_sentence += sentence.strip() + '。'
+            current_sentence += sentence.strip() + ''
             if len(current_sentence) >= min_length:
                 result.append(current_sentence.strip())
                 current_sentence = ''
@@ -188,6 +194,19 @@ def read_long_text(file_path):
 
     raise ValueError("无法识别文件编码")
 
+
+def replace_tokens(text):
+    tokens = ['uv_break', 'laugh']
+    for token in tokens:
+        text = re.sub(r'\[' + re.escape(token) + r'\]', f'_{token}_', text)
+    return text
+
+
+def restore_tokens(text):
+    tokens = ['uv_break', 'laugh', 'music']
+    for token in tokens:
+        text = re.sub(r'_' + re.escape(token) + r'_', f'[{token}]', text)
+    return text
 
 if __name__ == '__main__':
     txts = [

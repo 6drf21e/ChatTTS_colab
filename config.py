@@ -1,4 +1,5 @@
 #  Description: Configuration file for the project
+DEFAULT_DIR = "output"
 DEFAULT_SPEED = 5
 DEFAULT_ORAL = 2
 DEFAULT_LAUGH = 0

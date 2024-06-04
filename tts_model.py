@@ -45,7 +45,7 @@ def deterministic(seed=0):
 
 
 def generate_audio_for_seed(chat, seed, texts, batch_size, speed, refine_text_prompt, temperature=DEFAULT_TEMPERATURE,
-                            top_P=DEFAULT_TOP_P, top_K=DEFAULT_TOP_K, cur_tqdm=None, skip_save=False):
+                            top_P=DEFAULT_TOP_P, top_K=DEFAULT_TOP_K, cur_tqdm=None, skip_save=False, skip_refine_text=False):
     from utils import combine_audio, save_audio, batch_split
     # torch.manual_seed(seed)
     # top_P = 0.7,
@@ -82,7 +82,7 @@ def generate_audio_for_seed(chat, seed, texts, batch_size, speed, refine_text_pr
         # print(refine_text)
         # exit()
         wavs = chat.infer(batch, params_infer_code=params_infer_code, params_refine_text=params_refine_text,
-                          use_decoder=True, skip_refine_text=False)
+                          use_decoder=True, skip_refine_text=skip_refine_text)
         all_wavs.extend(wavs)
         clear_cuda_cache()
     if skip_save:
@@ -92,9 +92,8 @@ def generate_audio_for_seed(chat, seed, texts, batch_size, speed, refine_text_pr
     elapsed_time = end_time - start_time
     print(f"Saving audio for seed {seed}, took {elapsed_time:.2f}s")
     timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H%M%S')
-    wav_filename = f"long-[seed_{seed}][speed_{speed}]{refine_text_prompt}[{timestamp}].wav"
-    save_audio(wav_filename, combined_audio)
-    return wav_filename
+    wav_filename = f"chattts-[seed_{seed}][speed_{speed}]{refine_text_prompt}[{timestamp}].wav"
+    return save_audio(wav_filename, combined_audio)
 
 
 def tts(chat, text_file, seed, speed, oral, laugh, bk, seg, batch, progres=None):

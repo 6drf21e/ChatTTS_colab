@@ -164,3 +164,4 @@ ChatTTS/
 test_data/
 *.wav
 saved_seeds/
+models/
