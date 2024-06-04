@@ -4,7 +4,8 @@
 
 # 演示视频
 
-[![演示视频](https://img.youtube.com/vi/199fyU7NfUQ/0.jpg)](https://www.youtube.com/watch?v=199fyU7NfUQ)
+[![演示视频](https://img.youtube.com/vi/199fyU7NfUQ/0.jpg)](https://www.youtube.com/watch?v=199fyU7NfUQ) 
+欢迎关注[氪学家频道](https://www.youtube.com/@kexue) 
 
 
 |  版本   | 地址  | 介绍 |
