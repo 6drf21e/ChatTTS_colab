@@ -2,6 +2,11 @@
 
 > 基于 [ChatTTS](https://github.com/2noise/ChatTTS) 的 Colab 项目，可以部署在Colab，亦可离线下载到本地部署。两者部署完后都可以打开一个网页访问ChatTTS服务。
 
+# 演示视频
+
+[![演示视频](https://img.youtube.com/vi/199fyU7NfUQ/0.jpg)](https://www.youtube.com/watch?v=199fyU7NfUQ)
+
+
 |  版本   | 地址  | 介绍 |
 |  ----  | ---- | ---- |
 | 在线Colab版  | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/6drf21e/ChatTTS_colab/blob/main/chattts_webui_mix.ipynb) | 可以在 Google Colab 上一键运行，需要Google账号，每次部署能使用72h，Colib自带15GB的GPU  |
