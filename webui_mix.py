@@ -40,9 +40,9 @@ if not os.path.exists(SAVED_SEEDS_FILE):
     with open(SAVED_SEEDS_FILE, "w") as f:
         f.write("[]")
 
-# chat = load_chat_tts_model(source=args.source, local_path=args.local_path)
+chat = load_chat_tts_model(source=args.source, local_path=args.local_path)
 # chat = None
-chat = load_chat_tts_model(source="local", local_path=r"models")
+# chat = load_chat_tts_model(source="local", local_path=r"models")
 
 # 抽卡的最大数量
 max_audio_components = 10
