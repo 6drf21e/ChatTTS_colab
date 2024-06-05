@@ -1,19 +1,19 @@
 import os
 import sys
 sys.path.insert(0, os.getcwd())
-import argparse
+import ChatTTS
 import re
 import time
+import io
 from io import BytesIO
 import pandas
 import numpy as np
 from tqdm import tqdm
 import random
 import os
-import gradio as gr
 import json
-from utils import combine_audio, save_audio, batch_split, normalize_zh
-from tts_model import load_chat_tts_model, clear_cuda_cache, deterministic, generate_audio_for_seed
+from utils import batch_split
+import torch
 import soundfile as sf
 import wave
 
@@ -29,15 +29,32 @@ from pydantic import BaseModel
 
 import uvicorn
 
+
 from typing import Generator
 
 
-parser = argparse.ArgumentParser(description="Gradio ChatTTS MIX")
-parser.add_argument("--source", type=str, default="local", help="Model source: 'huggingface' or 'local'.")
-parser.add_argument("--local_path", type=str,default="models", help="Path to local model if source is 'local'.")
-parser.add_argument("--share", default=False, action="store_true", help="Share the server publicly.")
 
-args = parser.parse_args()
+chat = ChatTTS.Chat()
+def clear_cuda_cache():
+    """
+    Clear CUDA cache
+    :return:
+    """
+    torch.cuda.empty_cache()
+
+
+def deterministic(seed=0):
+    """
+    Set random seed for reproducibility
+    :param seed:
+    :return:
+    """
+    # ref: https://github.com/Jackiexiao/ChatTTS-api-ui-docker/blob/main/api.py#L27
+    torch.manual_seed(seed)
+    np.random.seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
 
 
 class TTS_Request(BaseModel):
@@ -48,25 +65,9 @@ class TTS_Request(BaseModel):
     streaming: int = 0
 
 
-# 存放音频种子文件的目录
-SAVED_DIR = "saved_seeds"
 
-# mkdir
-if not os.path.exists(SAVED_DIR):
-    os.makedirs(SAVED_DIR)
 
-# 文件路径
-SAVED_SEEDS_FILE = os.path.join(SAVED_DIR, "saved_seeds.json")
 
-# 选中的种子index
-SELECTED_SEED_INDEX = -1
-
-# 初始化JSON文件
-if not os.path.exists(SAVED_SEEDS_FILE):
-    with open(SAVED_SEEDS_FILE, "w") as f:
-        f.write("[]")
-
-chat = load_chat_tts_model(source=args.source, local_path=args.local_path)
 
 app = FastAPI()
 
@@ -154,21 +155,20 @@ def pack_audio(io_buffer:BytesIO, data:np.ndarray, rate:int, media_type:str):
     io_buffer.seek(0)
     return io_buffer
 
-def generate_tts_audio(text_file,seed=2581,speed=3, oral=0, laugh=0, bk=4, min_length=10, batch_size=10, temperature=0.3, top_P=0.7,
-                       top_K=20,streaming=0):
 
-    from tts_model import generate_audio_for_seed
+def generate_tts_audio(text_file,seed=2581,speed=3, oral=0, laugh=0, bk=4, min_length=10, batch_size=5, temperature=0.3, top_P=0.7,
+                       top_K=20,streaming=0,cur_tqdm=None):
+
+    from utils import combine_audio, save_audio, batch_split
+
     from utils import split_text
 
-    cur_tqdm = False
 
     if seed in [0, -1, None]:
         seed = random.randint(1, 9999)
-    content = ''
-    if os.path.isfile(text_file):
-        content = ""
-    elif isinstance(text_file, str):
-        content = text_file
+
+    
+    content = text_file
     texts = split_text(content, min_length=min_length)
     
 
@@ -193,20 +193,23 @@ def generate_tts_audio(text_file,seed=2581,speed=3, oral=0, laugh=0, bk=4, min_l
         'top_K': top_K,
         'temperature': temperature
     }
-    all_wavs = []
-    start_time = time.time()
-    total = len(texts)
-    flag = 0
+    
+
+
     if not cur_tqdm:
         cur_tqdm = tqdm
 
+    start_time = time.time()
+
     if not streaming:
 
+        all_wavs = []
+
+
+
         for batch in cur_tqdm(batch_split(texts, batch_size), desc=f"Inferring audio for seed={seed}"):
-            flag += len(batch)
-            # refine_text =  chat.infer(batch, params_infer_code=params_infer_code, params_refine_text=params_refine_text, refine_text_only=True)
-            # print(refine_text)
-            # exit()
+
+            
             wavs = chat.infer(batch, params_infer_code=params_infer_code, params_refine_text=params_refine_text,use_decoder=True, skip_refine_text=False)
             audio_data = wavs[0][0]
             audio_data = audio_data / np.max(np.abs(audio_data))
@@ -214,16 +217,22 @@ def generate_tts_audio(text_file,seed=2581,speed=3, oral=0, laugh=0, bk=4, min_l
 
             all_wavs.append(audio_data)
 
-    
-            clear_cuda_cache()
+            # all_wavs.extend(wavs)
 
-        audio = (np.concatenate(all_wavs, 0) * 32768).astype(
+            # clear_cuda_cache()
+
+        
+
+        audio = (np.concatenate(all_wavs) * 32768).astype(
                 np.int16
             )
 
-        print(audio)
+        # end_time = time.time()
+        # elapsed_time = end_time - start_time
+        # print(f"Saving audio for seed {seed}, took {elapsed_time:.2f}s")
 
         yield audio
+
 
     else:
 
@@ -239,9 +248,11 @@ def generate_tts_audio(text_file,seed=2581,speed=3, oral=0, laugh=0, bk=4, min_l
             audio_data = wavs[0][0]
             audio_data = audio_data / np.max(np.abs(audio_data))
             audio_data = (audio_data * 32767).astype(np.int16)
-            yield audio_data
 
             clear_cuda_cache()
+
+            yield audio_data
+
 
             
 
@@ -251,18 +262,23 @@ async def tts_handle(req:dict):
 
     media_type = req["media_type"]
 
+    print(req["streaming"])
+
     if not req["streaming"]:
     
         audio_data = next(generate_tts_audio(req["text"],req["seed"]))
+
+        # print(audio_data)
+
         sr = 24000
-
-        print(audio_data)
-
 
         audio_data = pack_audio(BytesIO(), audio_data, sr, media_type).getvalue()
 
 
         return Response(audio_data, media_type=f"audio/{media_type}")
+
+        
+        # return FileResponse(f"./{audio_data}", media_type="audio/wav")
     
     else:
         
@@ -281,15 +297,14 @@ async def tts_handle(req:dict):
 
 
 @app.get("/")
-async def tts_get_endpoint(
-                        text: str = None,media_type:str = "wav",seed:int = 2581,streaming:int = 0,
-                        ):
+async def tts_get(text: str = None,media_type:str = "wav",seed:int = 2581,streaming:int = 0):
     req = {
         "text": text,
         "media_type": media_type,
         "seed": seed,
         "streaming": streaming,
     }
+    print("第一次")
     return await tts_handle(req)
 
 
@@ -318,5 +333,10 @@ async def tts_to_audio(request: TTS_Request):
 
     return await tts_handle(req)
 
+if __name__ == "__main__":
 
-uvicorn.run(app, host="0.0.0.0", port=9880,workers=1)
+    chat.load_models(source="local", local_path="models")
+
+    # chat = load_chat_tts_model(source="local", local_path="models")
+
+    uvicorn.run(app,host='0.0.0.0',port=9880,workers=1)
