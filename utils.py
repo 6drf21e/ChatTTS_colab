@@ -231,10 +231,11 @@ def process_ddd(text):
     for i, (word, flag) in enumerate(word_list):
         if word in ["地", "得"]:
             # Check previous and next word's flag
-            prev_flag = word_list[i - 1][1] if i > 0 else None
-            next_flag = word_list[i + 1][1] if i + 1 < len(word_list) else None
+            # prev_flag = word_list[i - 1][1] if i > 0 else None
+            # next_flag = word_list[i + 1][1] if i + 1 < len(word_list) else None
 
-            if prev_flag in ['v', 'a'] or next_flag in ['v', 'a']:
+            # if prev_flag in ['v', 'a'] or next_flag in ['v', 'a']:
+            if flag in ['uv', 'ud']:
                 processed_words.append("的")
             else:
                 processed_words.append(word)
@@ -251,7 +252,8 @@ if __name__ == '__main__':
         "小红帽疑惑地问？",
         "大灰狼慌张地回答",
         "哦，这是为了更好地听你说话。",
-        "大灰狼不耐烦地说：“为了更好地抱你。”"
+        "大灰狼不耐烦地说：“为了更好地抱你。”",
+        "他跑得很快，工作做得非常认真，这是他努力地结果。得到",
     ]
     for txt in txts:
         print(txt, '-->', process_ddd(txt))
