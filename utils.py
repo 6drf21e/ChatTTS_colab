@@ -4,9 +4,16 @@ except ImportError:
     print("The 'cn2an' module is not installed. Please install it using 'pip install cn2an'.")
     exit(1)
 
+try:
+    import jieba
+except ImportError:
+    print("The 'jieba' module is not installed. Please install it using 'pip install jieba'.")
+    exit(1)
+
 import re
 import numpy as np
 import wave
+import jieba.posseg as pseg
 
 
 def save_audio(file_name, audio, rate=24000):
@@ -31,6 +38,7 @@ def save_audio(file_name, audio, rate=24000):
         wf.setframerate(rate)
         wf.writeframes(audio.tobytes())
     return full_path
+
 
 def combine_audio(wavs):
     """
@@ -163,7 +171,7 @@ def split_text(text, min_length=60):
 
 def normalize_zh(text):
     # return text_normalize(remove_chinese_punctuation(text))
-    return convert_numbers_to_chinese(remove_chinese_punctuation(text))
+    return process_ddd(convert_numbers_to_chinese(remove_chinese_punctuation(text)))
 
 
 def batch_split(items, batch_size=5):
@@ -208,13 +216,52 @@ def restore_tokens(text):
         text = re.sub(r'_' + re.escape(token) + r'_', f'[{token}]', text)
     return text
 
+
+def process_ddd(text):
+    """
+    处理“地”、“得” 字的使用，都替换为“的”
+    依据：地、得的使用，主要是在动词和形容词前后，本方法没有严格按照语法替换，因为时常遇到用错的情况。
+    另外受 jieba 分词准确率的影响，部分情况下可能会出漏掉。例如：小红帽疑惑地问
+    :param text: 输入的文本
+    :return: 处理后的文本
+    """
+    word_list = [(word, flag) for word, flag in pseg.cut(text, use_paddle=False)]
+    # print(word_list)
+    processed_words = []
+    for i, (word, flag) in enumerate(word_list):
+        if word in ["地", "得"]:
+            # Check previous and next word's flag
+            prev_flag = word_list[i - 1][1] if i > 0 else None
+            next_flag = word_list[i + 1][1] if i + 1 < len(word_list) else None
+
+            if prev_flag in ['v', 'a'] or next_flag in ['v', 'a']:
+                processed_words.append("的")
+            else:
+                processed_words.append(word)
+        else:
+            processed_words.append(word)
+
+    return ''.join(processed_words)
+
+
 if __name__ == '__main__':
     txts = [
-        "电影中梁朝伟扮演的陈永仁的编号27149",
-        "这块黄金重达324.75克 我们班的最高总分为583分",
-        "12\~23 -1.5\~2",
-
+        "快速地跑过红色的大门",
+        "笑得很开心，学得很好",
+        "小红帽疑惑地问？",
+        "大灰狼慌张地回答",
+        "哦，这是为了更好地听你说话。",
+        "大灰狼不耐烦地说：“为了更好地抱你。”"
     ]
     for txt in txts:
-        print(txt, '-->', text_normalize(txt))
-        # print(txt, '-->', convert_numbers_to_chinese(txt))
+        print(txt, '-->', process_ddd(txt))
+
+    # txts = [
+    #     "电影中梁朝伟扮演的陈永仁的编号27149",
+    #     "这块黄金重达324.75克 我们班的最高总分为583分",
+    #     "12\~23 -1.5\~2",
+    #
+    # ]
+    # for txt in txts:
+    #     print(txt, '-->', text_normalize(txt))
+    #     # print(txt, '-->', convert_numbers_to_chinese(txt))
