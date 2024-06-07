@@ -40,12 +40,67 @@
 
 ## 快速开始
 
+### 在 Colab 运行
+
 1. 点击最上方的 "Open In Colab" 按钮，打开 Colab 笔记本。
 2. 点击菜单栏的–代码执行程序–全部运行即可
 3. 执行后在下方的日志中找到类似
    Running on public URL: https://**********.gradio.live
 4. https://**********.gradio.live 就是可以访问的公网地址
 
+### 在 macOS 上运行
+
+1. 安装 [Conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/macos.html)（如果尚未安装）。
+2. 打开终端，创建一个新的 conda 环境：
+   ```bash
+   conda create -n "ChatTTS_colab" python=3.11
+   ```
+3. 激活刚创建的环境：
+   ```bash
+   conda activate ChatTTS_colab
+   ```
+3. 克隆本项目仓库到本地：
+   ```bash
+   git clone git@github.com:6drf21e/ChatTTS_colab.git
+   ```
+4. 手动安装 ChatTTS 依赖到项目目录：
+   ```bash
+   cd ChatTTS_colab
+   git clone https://github.com/2noise/ChatTTS
+   cd ChatTTS
+   git checkout -q f4c8329
+   cd ..
+   mv ChatTTS temp
+   mv temp/ChatTTS ./ChatTTS
+   rm -rf temp
+   ```
+5. 在项目目录安装 ChatTTS_colab 所需的依赖：
+   ```bash
+   pip install -r requirements.txt
+   ```
+6. 运行项目，等待自动下载模型：
+   ```bash
+   python webui_mix.py
+   # Loading ChatTTS model...
+   ```
+   一切正常的话会自动打开浏览器。
+
+## 常见问题：
+1. 第一次运行项目，ChatTTS 会自动从 huggingface 下载模型，如果因为网络问题下载失败，那么 ChatTTS 是无法自行重新下载的，需要清除缓存后重新触发下载。
+   错误信息示例：
+   ```log
+   FileNotFoundError: [Errno 2] No such file or directory: '~/.cache/huggingface/hub/models--2Noise--ChatTTS/snapshots/d7474137acb4f988874e5d57ad88d81bcb7e10b6/asset/Vocos.pt'
+   ```
+   清除缓存的方法：
+   ```bash
+   rm -rf ~/.cache/huggingface/hub/models--2Noise--ChatTTS
+   ```
+   清除缓存后，再次执行 `python webui_mix.py`，就会重新下载模型。
+
+   如果多次下载都无法成功，可以手动将**离线包**里的 models 拷贝到项目目录，从本地加载模型
+      ```bash
+      python webui_mix.py --source local --local_path models
+      ```
 
 ## 贡献
 
