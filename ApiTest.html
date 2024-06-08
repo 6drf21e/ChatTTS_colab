@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TTS 测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            max-width: 600px;
+            margin: auto;
+        }
+        label, button {
+            display: block;
+            margin-top: 10px;
+        }
+        textarea, select, input[type="number"], input[type="text"] {
+            width: calc(100% - 10px);
+            margin-top: 5px;
+            padding: 5px;
+            font-size: 16px;
+        }
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        h2, pre {
+            margin-top: 20px;
+        }
+        audio {
+            width: 100%;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>ChatTTS API 测试</h1>
+    <label for="api_url">接口 URL：</label>
+    <input type="text" id="api_url" value="http://localhost:9880/">
+
+    <label for="text">测试文本：</label>
+    <textarea id="text" rows="10">我是一个充满活力的人，喜欢运动，喜欢旅行，喜欢尝试新鲜事物。我喜欢挑战自己，不断突破自己的极限，让自己变得更加强大。我是一个充满活力的人，喜欢运动，喜欢旅行，喜欢尝试新鲜事物。我喜欢挑战自己，不断突破自己的极限，让自己变得更加强大。</textarea>
+
+    <label for="media_type">媒体类型：</label>
+    <select id="media_type">
+        <option value="wav">wav</option>
+        <option value="mp3">mp3</option>
+        <option value="flac">flac</option>
+    </select>
+
+    <label for="seed">种子：</label>
+    <input type="number" id="seed" value="2581">
+
+    <label for="streaming">流式输出：</label>
+    <input type="checkbox" id="streaming" checked>
+
+    <button onclick="sendRequest()">发送请求</button>
+
+    <h2>输出</h2>
+    <pre id="output"></pre>
+    <audio id="audio" controls></audio>
+
+    <script>
+        async function sendRequest() {
+            const apiUrl = document.getElementById('api_url').value;
+            const text = document.getElementById('text').value;
+            const media_type = document.getElementById('media_type').value;
+            const seed = document.getElementById('seed').value;
+            const streaming = document.getElementById('streaming').checked ? 1 : 0;
+
+            const output = document.getElementById('output');
+            output.textContent = "请求中...\n";
+
+            const audioElement = document.getElementById('audio');
+
+            try {
+                const url = `${apiUrl}?text=${encodeURIComponent(text)}&media_type=${media_type}&seed=${seed}&streaming=${streaming}`;
+                output.textContent += `请求 URL: ${url}\n`;
+
+                audioElement.src = url;
+                audioElement.play();
+
+                output.textContent += "音频即将播放...\n";
+            } catch (error) {
+                output.textContent += `请求错误: ${error}\n`;
+            }
+        }
+    </script>
+</body>
+</html>
