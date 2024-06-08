@@ -1,4 +1,5 @@
 #  Description: Configuration file for the project
+llama_seed = 2581
 DEFAULT_DIR = "output"
 DEFAULT_SPEED = 5
 DEFAULT_ORAL = 2
