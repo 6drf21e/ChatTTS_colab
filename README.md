@@ -1,16 +1,20 @@
 # ChatTTS_colab
 
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/6drf21e/ChatTTS_colab/blob/main/chattts_webui_mix.ipynb)
+> 🚀 一键部署（含离线整合包）！基于 [ChatTTS](https://github.com/2noise/ChatTTS)  ，支持音色抽卡、长音频生成和分角色朗读。简单易用，无需复杂安装。。
 
-基于 [ChatTTS](https://github.com/2noise/ChatTTS) 的 Colab 项目，可以在 Google Colab 上一键运行
 
-### 🚀整合包下载🚀
+|  版本   | 地址                                                                                                                                                                             | 介绍                                                             |
+|  ----  |--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------|
+| 在线Colab版  | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/6drf21e/ChatTTS_colab/blob/main/chattts_webui_mix.ipynb) | 可以在 Google Colab 上一键运行，需要 Google账号，Colib 自带15GB的GPU |
+| 离线整合版    | [百度网盘](https://pan.baidu.com/s/1-hGiPLs6ORM8sZv0xTdxFA?pwd=h3c5) 提取码: h3c5                                                                            | 下载本地运行，支持 GPU/CPU，适用 Windows 10 及以上     |
+| 离线整合版    | [夸克网盘](https://pan.quark.cn/s/c963e147f204)                                                                                                              | 下载本地运行，支持 GPU/CPU，适用 Windows 10 及以上     |
 
-**系统版本**: Windows 10 及以上
 
-**下载地址**: [百度网盘](https://pan.baidu.com/s/199imviwIB3ak_SFZRrQKjQ?pwd=ut3a) 
+# 演示视频
 
-**提取码**: ut3a
+[![演示视频](https://img.youtube.com/vi/199fyU7NfUQ/0.jpg)](https://www.youtube.com/watch?v=199fyU7NfUQ)
+
+欢迎关注 [氪学家频道](https://www.youtube.com/@kexue) ，获取更多有趣的科技视频。
 
 ## 特点
 
@@ -18,7 +22,7 @@
 - **音色抽卡功能**：批量生成多个音色，并可保存自己喜欢的音色。
 - **支持生成长音频**：适合生成较长的语音内容。
 - **字符处理**：对数字和朗读错误的标点做了初步处理。
-- **分角色朗读功能** ：🚀支持对不同角色的文本进行分角色朗读，并支持大模型一键生产脚本。
+- **分角色朗读功能** ：支持对不同角色的文本进行分角色朗读，并支持大模型一键生产脚本。
 
 ## 功能展示
 

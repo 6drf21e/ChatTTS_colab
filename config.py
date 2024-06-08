@@ -1,6 +1,6 @@
 #  Description: Configuration file for the project
-# 大模型默认角色种子
 llama_seed = 2581
+DEFAULT_DIR = "output"
 DEFAULT_SPEED = 5
 DEFAULT_ORAL = 2
 DEFAULT_LAUGH = 0
