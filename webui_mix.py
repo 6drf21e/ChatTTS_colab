@@ -69,6 +69,7 @@ def load_seeds():
         saved_seeds = seeds
     return saved_seeds
 
+
 def display_seeds():
     seeds = load_seeds()
     # 转换为 List[List] 的形式
@@ -148,6 +149,7 @@ def generate_seeds(num_seeds, texts, tq):
 
 # 保存选定的音频种子
 def do_save_seed(seed, audio_path):
+    print(f"Saving seed {seed} to {audio_path}")
     seed = seed.replace('保存种子 ', '').strip()
     if not seed:
         return
@@ -182,6 +184,7 @@ def do_delete_seed(val):
         gr.Info(f"Seed {seed} has been deleted.")
     return display_seeds()
 
+
 # 定义播放音频的函数
 def do_play_seed(val):
     # 从 val 匹配 [(\d+)] 获取index
@@ -194,11 +197,13 @@ def do_play_seed(val):
             return gr.update(visible=True, value=audio_path)
     return gr.update(visible=False, value=None)
 
+
 def seed_change_btn():
     global SELECTED_SEED_INDEX
     if SELECTED_SEED_INDEX == -1:
         return ['删除', '试听']
     return [f'删除 idx=[{SELECTED_SEED_INDEX[0]}]', f'试听 idx=[{SELECTED_SEED_INDEX[0]}]']
+
 
 def audio_interface(num_seeds, texts, progress=gr.Progress()):
     """
@@ -214,10 +219,12 @@ def audio_interface(num_seeds, texts, progress=gr.Progress()):
     # 不足的部分
     all_wavs = wavs + [None] * (max_audio_components - len(wavs))
     all_seeds = seeds + [''] * (max_audio_components - len(seeds))
-    return [item for pair in zip(all_wavs, all_seeds) for item in pair]
+    return [item for pair in zip(all_wavs, all_seeds, all_wavs) for item in pair]
+
 
 # 保存刚刚生成的种子文件路径
 audio_paths = [gr.State(value=None) for _ in range(max_audio_components)]
+
 
 def audio_interface_with_paths(num_seeds, texts, progress=gr.Progress()):
     """
@@ -229,8 +236,9 @@ def audio_interface_with_paths(num_seeds, texts, progress=gr.Progress()):
         audio_paths[i].value = wav  # 直接为 State 组件赋值
     return results
 
+
 def audio_interface_empty(num_seeds, texts, progress=gr.Progress(track_tqdm=True)):
-    return [None, ""] * max_audio_components
+    return [None, "", None] * max_audio_components
 
 
 def update_audio_components(slider_value):
@@ -238,8 +246,9 @@ def update_audio_components(slider_value):
     k = int(slider_value)
     audios = [gr.Audio(visible=True)] * k + [gr.Audio(visible=False)] * (max_audio_components - k)
     tbs = [gr.Textbox(visible=True)] * k + [gr.Textbox(visible=False)] * (max_audio_components - k)
+    stats = [gr.State(value=None)] * max_audio_components
     print(f'k={k}, audios={len(audios)}')
-    return [item for pair in zip(audios, tbs) for item in pair]
+    return [item for pair in zip(audios, tbs, stats) for item in pair]
 
 
 def seed_change(evt: gr.SelectData):
@@ -290,7 +299,8 @@ def generate_seed():
 def update_label(text):
     word_count = len(text)
     if re.search(r'\[uv_break\]|\[laugh\]', text) is not None:
-        return gr.update(label=f"朗读文本（{word_count} 字）>>检测到 [uv_break] [laugh]，建议关闭 Refine 以避免非预期音频<<")
+        return gr.update(
+            label=f"朗读文本（{word_count} 字）>>检测到 [uv_break] [laugh]，建议关闭 Refine 以避免非预期音频<<")
     return gr.update(label=f"朗读文本（{word_count} 字）")
 
 
@@ -303,6 +313,7 @@ def inser_token(text, btn):
         return gr.update(
             value=text + "[uv_break]"
         )
+
 
 with gr.Blocks() as demo:
     # 项目链接
@@ -342,9 +353,9 @@ with gr.Blocks() as demo:
                     datatype=["number", "number", "str", "str"],
                     interactive=True,
                     col_count=(4, "fixed"),
-                    value=display_seeds()
+                    value=display_seeds
                 )
-                
+
                 with gr.Row():
                     refresh_button = gr.Button("刷新")
                     save_button = gr.Button("保存")
@@ -368,9 +379,11 @@ with gr.Blocks() as demo:
                     visible = i < num_seeds_default
                     a = gr.Audio(f"Audio {i}", visible=visible)
                     t = gr.Button(f"Seed", visible=visible)
-                    t.click(do_save_seed, inputs=[t, audio_paths[i]], outputs=None).success(display_seeds, outputs=seed_list)
+                    s = gr.State(value=None)
+                    t.click(do_save_seed, inputs=[t, s], outputs=None).success(display_seeds, outputs=seed_list)
                     audio_components.append(a)
                     audio_components.append(t)
+                    audio_components.append(s)
 
                 num_seeds.change(update_audio_components, inputs=num_seeds, outputs=audio_components)
                 # output = gr.Column()
@@ -380,7 +393,7 @@ with gr.Blocks() as demo:
                 audio_interface_empty,
                 inputs=[num_seeds, input_text],
                 outputs=audio_components
-            ).success(audio_interface_with_paths, inputs=[num_seeds, input_text], outputs=audio_components)
+            ).success(audio_interface, inputs=[num_seeds, input_text], outputs=audio_components)
     with gr.Tab("长音频生成"):
         with gr.Row():
             with gr.Column():
