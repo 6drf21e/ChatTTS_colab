@@ -14,6 +14,8 @@ import gradio as gr
 import json
 from utils import combine_audio, save_audio, batch_split, normalize_zh
 from tts_model import load_chat_tts_model, clear_cuda_cache, deterministic, generate_audio_for_seed
+from config import DEFAULT_BATCH_SIZE, DEFAULT_SPEED, DEFAULT_TEMPERATURE, DEFAULT_TOP_K, DEFAULT_TOP_P, DEFAULT_ORAL, \
+    DEFAULT_LAUGH, DEFAULT_BK, DEFAULT_SEG_LENGTH
 
 parser = argparse.ArgumentParser(description="Gradio ChatTTS MIX")
 parser.add_argument("--source", type=str, default="huggingface", help="Model source: 'huggingface' or 'local'.")
@@ -274,7 +276,6 @@ def generate_tts_audio(text_file, num_seeds, seed, speed, oral, laugh, bk, min_l
     texts = split_text(content, min_length=min_length)
     for i, text in enumerate(texts):
         texts[i] = restore_tokens(text)
-    print(texts)
 
     if oral < 0 or oral > 9 or laugh < 0 or laugh > 2 or bk < 0 or bk > 7:
         raise ValueError("oral_(0-9), laugh_(0-2), break_(0-7) out of range")
@@ -288,6 +289,33 @@ def generate_tts_audio(text_file, num_seeds, seed, speed, oral, laugh, bk, min_l
         return str(e)
 
 
+def generate_refine(text_file, oral, laugh, bk, temperature, top_P, top_K, progress=gr.Progress()):
+    from tts_model import generate_refine_text
+    from utils import split_text, replace_tokens, restore_tokens, replace_space_between_chinese
+    seed = random.randint(1, 9999)
+    refine_text_prompt = f"[oral_{oral}][laugh_{laugh}][break_{bk}]"
+    content = ''
+    if os.path.isfile(text_file):
+        content = ""
+    elif isinstance(text_file, str):
+        content = text_file
+    if re.search(r'\[uv_break\]|\[laugh\]', content) is not None:
+        gr.Info("检测到 [uv_break] [laugh]，不能重复 refine ")
+        # print("检测到 [uv_break] [laugh]，不能重复 refine ")
+        return content
+    batch_size = 5
+
+    content = replace_tokens(content)
+    texts = split_text(content, min_length=120)
+    print(texts)
+    for i, text in enumerate(texts):
+        texts[i] = restore_tokens(text)
+    txts = []
+    for batch in progress.tqdm(batch_split(texts, batch_size), desc=f"Refine Text Please Wait ..."):
+        txts.extend(generate_refine_text(chat, seed, batch, refine_text_prompt, temperature, top_P, top_K))
+    return replace_space_between_chinese('\n\n'.join(txts))
+
+
 def generate_seed():
     new_seed = random.randint(1, 9999)
     return {
@@ -298,9 +326,6 @@ def generate_seed():
 
 def update_label(text):
     word_count = len(text)
-    if re.search(r'\[uv_break\]|\[laugh\]', text) is not None:
-        return gr.update(
-            label=f"朗读文本（{word_count} 字）>>检测到 [uv_break] [laugh]，建议关闭 Refine 以避免非预期音频<<")
     return gr.update(label=f"朗读文本（{word_count} 字）")
 
 
@@ -409,37 +434,39 @@ with gr.Blocks() as demo:
                 with gr.Row():
                     break_button = gr.Button("+停顿", variant="secondary")
                     laugh_button = gr.Button("+笑声", variant="secondary")
+                refine_button = gr.Button("Refine Text（预处理 加入停顿词、笑声等）", variant="secondary")
 
             with gr.Column():
                 gr.Markdown("### 配置参数")
-                gr.Markdown("根据需要配置以下参数来生成音频。")
                 with gr.Row():
                     num_seeds_input = gr.Number(label="生成音频的数量", value=1, precision=0, visible=False)
-                    seed_input = gr.Number(label="指定种子（留空则随机）", value=None, precision=0)
+                    seed_input = gr.Number(label="指定种子", info="种子决定音色 0则随机", value=None, precision=0)
                     generate_audio_seed = gr.Button("\U0001F3B2")
-
                 with gr.Row():
-                    speed_input = gr.Slider(label="语速", minimum=1, maximum=10, value=5, step=1)
-                    oral_input = gr.Slider(label="口语化", minimum=0, maximum=9, value=2, step=1)
-
-                    laugh_input = gr.Slider(label="笑声", minimum=0, maximum=2, value=0, step=1)
-                    bk_input = gr.Slider(label="停顿", minimum=0, maximum=7, value=4, step=1)
-                # gr.Markdown("### 文本参数")
+                    style_select = gr.Radio(label="预设参数", info="语速部分可自行更改",
+                                            choices=["小说朗读", "闲聊", "默认"], interactive=True, )
                 with gr.Row():
                     # refine
                     refine_text_input = gr.Checkbox(label="Refine",
-                                                    info="打开后会自动根据上方参数添加笑声/停顿等。关闭后可自行添加 [uv_break] [laugh]",
+                                                    info="打开后会自动根据下方参数添加笑声/停顿等。关闭后可自行添加 [uv_break] [laugh] 或者点击下方 Refin按钮先行转换",
                                                     value=True)
-                    min_length_input = gr.Number(label="文本分段长度", info="大于这个数值进行分段", value=120,
+                    speed_input = gr.Slider(label="语速", minimum=1, maximum=10, value=DEFAULT_SPEED, step=1)
+                with gr.Row():
+                    oral_input = gr.Slider(label="口语化", minimum=0, maximum=9, value=DEFAULT_ORAL, step=1)
+                    laugh_input = gr.Slider(label="笑声", minimum=0, maximum=2, value=DEFAULT_LAUGH, step=1)
+                    bk_input = gr.Slider(label="停顿", minimum=0, maximum=7, value=DEFAULT_BK, step=1)
+                # gr.Markdown("### 文本参数")
+                with gr.Row():
+                    min_length_input = gr.Number(label="文本分段长度", info="大于这个数值进行分段", value=DEFAULT_SEG_LENGTH,
                                                  precision=0)
-                    batch_size_input = gr.Number(label="批大小", info="同时处理的批次 越高越快 太高爆显存", value=5,
+                    batch_size_input = gr.Number(label="批大小", info="越高越快 太高爆显存 4G推荐3 其他酌情", value=DEFAULT_BATCH_SIZE,
                                                  precision=0)
                 with gr.Accordion("其他参数", open=False):
                     with gr.Row():
                         # 温度 top_P top_K
-                        temperature_input = gr.Slider(label="温度", minimum=0.01, maximum=1.0, step=0.01, value=0.3)
-                        top_P_input = gr.Slider(label="top_P", minimum=0.1, maximum=0.9, step=0.05, value=0.7)
-                        top_K_input = gr.Slider(label="top_K", minimum=1, maximum=20, step=1, value=20)
+                        temperature_input = gr.Slider(label="温度", minimum=0.01, maximum=1.0, step=0.01, value=DEFAULT_TEMPERATURE)
+                        top_P_input = gr.Slider(label="top_P", minimum=0.1, maximum=0.9, step=0.05, value=DEFAULT_TOP_P)
+                        top_K_input = gr.Slider(label="top_K", minimum=1, maximum=20, step=1, value=DEFAULT_TOP_K)
                         # reset 按钮
                         reset_button = gr.Button("重置")
 
@@ -453,6 +480,29 @@ with gr.Blocks() as demo:
                                   inputs=[],
                                   outputs=seed_input)
 
+
+        def do_style_select(x):
+            if x == "小说朗读":
+                return [4, 0, 0, 2]
+            elif x == "闲聊":
+                return [5, 5, 1, 4]
+            else:
+                return [DEFAULT_SPEED, DEFAULT_ORAL, DEFAULT_LAUGH, DEFAULT_BK]
+
+
+        # style_select 选择
+        style_select.change(
+            do_style_select,
+            inputs=style_select,
+            outputs=[speed_input, oral_input, laugh_input, bk_input]
+        )
+
+        # refine 按钮
+        refine_button.click(
+            generate_refine,
+            inputs=[text_file_input, oral_input, laugh_input, bk_input, temperature_input, top_P_input, top_K_input],
+            outputs=text_file_input
+        )
         # 重置按钮 重置温度等参数
         reset_button.click(
             lambda: [0.3, 0.7, 20],
@@ -561,7 +611,6 @@ with gr.Blocks() as demo:
             import itertools
             from tts_model import generate_audio_for_seed
             from utils import combine_audio, save_audio, normalize_zh
-            from config import DEFAULT_BATCH_SIZE, DEFAULT_SPEED, DEFAULT_TEMPERATURE, DEFAULT_TOP_K, DEFAULT_TOP_P
 
             assert isinstance(models_seeds, pd.DataFrame)
 
@@ -682,7 +731,7 @@ with gr.Blocks() as demo:
                 "txt": "当小红帽到达奶奶家时，她发现大灰狼伪装成了奶奶。",
                 "character": "旁白"
             }, {
-                "txt": "小红帽疑惑地问",
+                "txt": "小红帽疑惑的问",
                 "character": "旁白"
             }, {
                 "txt": "奶奶，你的耳朵怎么这么尖？",
@@ -756,9 +805,9 @@ with gr.Blocks() as demo:
                 # DataFrame 来存放转换后的脚本
                 # 默认数据 [speed_5][oral_2][laugh_0][break_4]
                 default_data = [
-                    ["旁白", 2222, 3, 1, 0, 4],
-                    ["年轻女性", 2, 5, 3, 2, 4],
-                    ["中年男性", 2424, 5, 2, 0, 6]
+                    ["旁白", 2222, 3, 0, 0, 2],
+                    ["年轻女性", 2, 5, 2, 0, 2],
+                    ["中年男性", 2424, 5, 2, 0, 2]
                 ]
 
                 script_data = gr.DataFrame(

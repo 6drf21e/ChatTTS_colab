@@ -2,6 +2,7 @@ import ChatTTS
 import torch
 import numpy as np
 import os
+import re
 import time
 from tqdm import tqdm
 import datetime
@@ -45,7 +46,8 @@ def deterministic(seed=0):
 
 
 def generate_audio_for_seed(chat, seed, texts, batch_size, speed, refine_text_prompt, temperature=DEFAULT_TEMPERATURE,
-                            top_P=DEFAULT_TOP_P, top_K=DEFAULT_TOP_K, cur_tqdm=None, skip_save=False, skip_refine_text=False):
+                            top_P=DEFAULT_TOP_P, top_K=DEFAULT_TOP_K, cur_tqdm=None, skip_save=False,
+                            skip_refine_text=False):
     from utils import combine_audio, save_audio, batch_split
     # torch.manual_seed(seed)
     # top_P = 0.7,
@@ -76,11 +78,13 @@ def generate_audio_for_seed(chat, seed, texts, batch_size, speed, refine_text_pr
     if not cur_tqdm:
         cur_tqdm = tqdm
 
+    if re.search(r'\[uv_break\]|\[laugh\]', ''.join(texts)) is not None:
+        if not skip_refine_text:
+            print("Detected [uv_break] or [laugh] in text, skipping refine_text")
+        skip_refine_text = True
+
     for batch in cur_tqdm(batch_split(texts, batch_size), desc=f"Inferring audio for seed={seed}"):
         flag += len(batch)
-        # refine_text =  chat.infer(batch, params_infer_code=params_infer_code, params_refine_text=params_refine_text, refine_text_only=True)
-        # print(refine_text)
-        # exit()
         wavs = chat.infer(batch, params_infer_code=params_infer_code, params_refine_text=params_refine_text,
                           use_decoder=True, skip_refine_text=skip_refine_text)
         all_wavs.extend(wavs)
@@ -94,6 +98,26 @@ def generate_audio_for_seed(chat, seed, texts, batch_size, speed, refine_text_pr
     timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H%M%S')
     wav_filename = f"chattts-[seed_{seed}][speed_{speed}]{refine_text_prompt}[{timestamp}].wav"
     return save_audio(wav_filename, combined_audio)
+
+
+def generate_refine_text(chat, seed, text, refine_text_prompt, temperature=DEFAULT_TEMPERATURE,
+                        top_P=DEFAULT_TOP_P, top_K=DEFAULT_TOP_K):
+    if seed in [None, -1, 0, "", "random"]:
+        seed = np.random.randint(0, 9999)
+
+    deterministic(seed)
+
+    params_refine_text = {
+        'prompt': refine_text_prompt,
+        'top_P': top_P,
+        'top_K': top_K,
+        'temperature': temperature
+    }
+    print('params_refine_text:', text)
+    print('refine_text_prompt:', refine_text_prompt)
+    refine_text = chat.infer(text, params_refine_text=params_refine_text, refine_text_only=True, skip_refine_text=False)
+    print('refine_text:', refine_text)
+    return refine_text
 
 
 def tts(chat, text_file, seed, speed, oral, laugh, bk, seg, batch, progres=None):
