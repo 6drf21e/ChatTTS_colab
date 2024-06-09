@@ -58,14 +58,21 @@ max_audio_components = 10
 def load_seeds():
     with open(SAVED_SEEDS_FILE, "r") as f:
         global saved_seeds
-        saved_seeds = json.load(f)
-    return saved_seeds
 
+        seeds = json.load(f)
+
+        # 兼容旧的 JSON 格式，添加 path 字段
+        for seed in seeds:
+            if 'path' not in seed:
+                seed['path'] = None
+
+        saved_seeds = seeds
+    return saved_seeds
 
 def display_seeds():
     seeds = load_seeds()
     # 转换为 List[List] 的形式
-    return [[i, s['seed'], s['name']] for i, s in enumerate(seeds)]
+    return [[i, s['seed'], s['name'], s['path']] for i, s in enumerate(seeds)]
 
 
 saved_seeds = load_seeds()
@@ -80,13 +87,14 @@ def save_seeds():
 
 
 # 添加 seed
-def add_seed(seed, name, save=True):
+def add_seed(seed, name, audio_path, save=True):
     for s in saved_seeds:
         if s['seed'] == seed:
             return False
     saved_seeds.append({
         'seed': seed,
-        'name': name
+        'name': name,
+        'path': audio_path
     })
     if save:
         save_seeds()
@@ -139,11 +147,11 @@ def generate_seeds(num_seeds, texts, tq):
 
 
 # 保存选定的音频种子
-def do_save_seed(seed):
+def do_save_seed(seed, audio_path):
     seed = seed.replace('保存种子 ', '').strip()
     if not seed:
         return
-    add_seed(int(seed), seed)
+    add_seed(int(seed), seed, audio_path)
     gr.Info(f"Seed {seed} has been saved.")
 
 
@@ -174,13 +182,23 @@ def do_delete_seed(val):
         gr.Info(f"Seed {seed} has been deleted.")
     return display_seeds()
 
+# 定义播放音频的函数
+def do_play_seed(val):
+    # 从 val 匹配 [(\d+)] 获取index
+    index = re.search(r'\[(\d+)\]', val)
+    if index:
+        index = int(index.group(1))
+        seed = saved_seeds[index]['seed']
+        audio_path = saved_seeds[index]['path']
+        if audio_path:
+            return gr.update(visible=True, value=audio_path)
+    return gr.update(visible=False, value=None)
 
 def seed_change_btn():
     global SELECTED_SEED_INDEX
     if SELECTED_SEED_INDEX == -1:
-        return '删除'
-    return f'删除 idx=[{SELECTED_SEED_INDEX[0]}]'
-
+        return ['删除', '试听']
+    return [f'删除 idx=[{SELECTED_SEED_INDEX[0]}]', f'试听 idx=[{SELECTED_SEED_INDEX[0]}]']
 
 def audio_interface(num_seeds, texts, progress=gr.Progress()):
     """
@@ -198,6 +216,18 @@ def audio_interface(num_seeds, texts, progress=gr.Progress()):
     all_seeds = seeds + [''] * (max_audio_components - len(seeds))
     return [item for pair in zip(all_wavs, all_seeds) for item in pair]
 
+# 保存刚刚生成的种子文件路径
+audio_paths = [gr.State(value=None) for _ in range(max_audio_components)]
+
+def audio_interface_with_paths(num_seeds, texts, progress=gr.Progress()):
+    """
+    比 audio_interface 多携带音频的 path
+    """
+    results = audio_interface(num_seeds, texts, progress)
+    wavs = results[::2]  # 提取音频文件路径
+    for i, wav in enumerate(wavs):
+        audio_paths[i].value = wav  # 直接为 State 组件赋值
+    return results
 
 def audio_interface_empty(num_seeds, texts, progress=gr.Progress(track_tqdm=True)):
     return [None, ""] * max_audio_components
@@ -308,21 +338,29 @@ with gr.Blocks() as demo:
                 gr.Markdown("### 种子管理界面")
                 seed_list = gr.DataFrame(
                     label="种子列表",
-                    headers=["Index", "Seed", "Name"],
-                    datatype=["number", "number", "str"],
+                    headers=["Index", "Seed", "Name", "Path"],
+                    datatype=["number", "number", "str", "str"],
                     interactive=True,
-                    col_count=(3, "fixed"),
+                    col_count=(4, "fixed"),
                     value=display_seeds()
                 )
+                
                 with gr.Row():
                     refresh_button = gr.Button("刷新")
                     save_button = gr.Button("保存")
                     del_button = gr.Button("删除")
+                    play_button = gr.Button("试听")
+
+                with gr.Row():
+                    # 添加已保存的种子音频播放组件
+                    audio_player = gr.Audio(label="播放已保存种子音频", visible=False)
+
                 # 绑定按钮和函数
                 refresh_button.click(display_seeds, outputs=seed_list)
-                seed_list.select(seed_change).success(seed_change_btn, outputs=[del_button])
+                seed_list.select(seed_change).success(seed_change_btn, outputs=[del_button, play_button])
                 save_button.click(do_save_seeds, inputs=[seed_list], outputs=None)
                 del_button.click(do_delete_seed, inputs=del_button, outputs=seed_list)
+                play_button.click(do_play_seed, inputs=play_button, outputs=audio_player)
 
             with gr.Column(scale=1):
                 audio_components = []
@@ -330,12 +368,11 @@ with gr.Blocks() as demo:
                     visible = i < num_seeds_default
                     a = gr.Audio(f"Audio {i}", visible=visible)
                     t = gr.Button(f"Seed", visible=visible)
-                    t.click(do_save_seed, inputs=[t], outputs=None).success(display_seeds, outputs=seed_list)
+                    t.click(do_save_seed, inputs=[t, audio_paths[i]], outputs=None).success(display_seeds, outputs=seed_list)
                     audio_components.append(a)
                     audio_components.append(t)
 
                 num_seeds.change(update_audio_components, inputs=num_seeds, outputs=audio_components)
-
                 # output = gr.Column()
                 # audio = gr.Audio(label="Output Audio")
 
@@ -343,7 +380,7 @@ with gr.Blocks() as demo:
                 audio_interface_empty,
                 inputs=[num_seeds, input_text],
                 outputs=audio_components
-            ).success(audio_interface, inputs=[num_seeds, input_text], outputs=audio_components)
+            ).success(audio_interface_with_paths, inputs=[num_seeds, input_text], outputs=audio_components)
     with gr.Tab("长音频生成"):
         with gr.Row():
             with gr.Column():
