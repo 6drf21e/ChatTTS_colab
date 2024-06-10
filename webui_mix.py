@@ -780,7 +780,7 @@ with gr.Blocks() as demo:
                                                        placeholder="请输入API Base URL",
                                                        value=r"https://api.openai.com/v1")
                     openai_api_key_input = gr.Textbox(label="OpenAI API Key", placeholder="请输入API Key",
-                                                      value="sk-xxxxxxx")
+                                                      value="sk-xxxxxxx",type="password")
                 # AI提示词
                 ai_text_input = gr.Textbox(label="剧情简介或者一段故事", placeholder="请输入文本...", lines=2,
                                            value=ai_text_default)
