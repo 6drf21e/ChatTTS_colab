@@ -219,7 +219,7 @@ def generate_tts_audio(text_file,seed=2581,speed=3, oral=0, laugh=0, bk=4, min_l
 
             # all_wavs.extend(wavs)
 
-            # clear_cuda_cache()
+            clear_cuda_cache()
 
         
 
