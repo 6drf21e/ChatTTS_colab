@@ -7,6 +7,7 @@ import time
 from tqdm import tqdm
 import datetime
 from config import DEFAULT_TEMPERATURE, DEFAULT_TOP_P, DEFAULT_TOP_K
+import json
 
 
 def load_chat_tts_model(source='huggingface', force_redownload=False, local_path=None):
@@ -45,7 +46,7 @@ def deterministic(seed=0):
     torch.backends.cudnn.benchmark = False
 
 
-def generate_audio_for_seed(chat, seed, texts, batch_size, speed, refine_text_prompt, temperature=DEFAULT_TEMPERATURE,
+def generate_audio_for_seed(chat, seed, texts, batch_size, speed, refine_text_prompt,roleid=None, temperature=DEFAULT_TEMPERATURE,
                             top_P=DEFAULT_TOP_P, top_K=DEFAULT_TOP_K, cur_tqdm=None, skip_save=False,
                             skip_refine_text=False):
     from utils import combine_audio, save_audio, batch_split
@@ -56,8 +57,22 @@ def generate_audio_for_seed(chat, seed, texts, batch_size, speed, refine_text_pr
     if seed in [None, -1, 0, "", "random"]:
         seed = np.random.randint(0, 9999)
 
-    deterministic(seed)
-    rnd_spk_emb = chat.sample_random_speaker()
+    if not roleid:
+        deterministic(seed)
+        rnd_spk_emb = chat.sample_random_speaker()
+    else:
+
+        # 从 JSON 文件中读取数据
+        with open('./slct_voice_240605.json', 'r', encoding='utf-8') as json_file:
+            slct_idx_loaded = json.load(json_file)
+
+        # 将包含 Tensor 数据的部分转换回 Tensor 对象
+        for key in slct_idx_loaded:
+            tensor_list = slct_idx_loaded[key]["tensor"]
+            slct_idx_loaded[key]["tensor"] = torch.tensor(tensor_list)
+
+        # 将音色 tensor 打包进params_infer_code，固定使用此音色发音，调低temperature
+        rnd_spk_emb = slct_idx_loaded[roleid]["tensor"]
     params_infer_code = {
         'spk_emb': rnd_spk_emb,
         'prompt': f'[speed_{speed}]',
