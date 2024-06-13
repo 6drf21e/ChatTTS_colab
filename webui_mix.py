@@ -142,7 +142,7 @@ def generate_seeds(num_seeds, texts, tq):
     for _ in tq(range(num_seeds), desc=f"随机音色生成中..."):
         seed = np.random.randint(0, 9999)
 
-        filename = generate_audio_for_seed(chat, seed, texts, 1, 5, "[oral_2][laugh_0][break_4]", 0.3, 0.7, 20)
+        filename = generate_audio_for_seed(chat, seed, texts, 1, 5, "[oral_2][laugh_0][break_4]",None,0.3, 0.7, 20)
         seeds.append((filename, seed))
         clear_cuda_cache()
 
@@ -261,7 +261,7 @@ def seed_change(evt: gr.SelectData):
 
 
 def generate_tts_audio(text_file, num_seeds, seed, speed, oral, laugh, bk, min_length, batch_size, temperature, top_P,
-                       top_K, refine_text=True, progress=gr.Progress()):
+                       top_K,roleid=None,refine_text=True, progress=gr.Progress()):
     from tts_model import generate_audio_for_seed
     from utils import split_text, replace_tokens, restore_tokens
     if seed in [0, -1, None]:
@@ -282,7 +282,7 @@ def generate_tts_audio(text_file, num_seeds, seed, speed, oral, laugh, bk, min_l
 
     refine_text_prompt = f"[oral_{oral}][laugh_{laugh}][break_{bk}]"
     try:
-        output_files = generate_audio_for_seed(chat, seed, texts, batch_size, speed, refine_text_prompt, temperature,
+        output_files = generate_audio_for_seed(chat, seed, texts, batch_size, speed, refine_text_prompt,roleid,temperature,
                                                top_P, top_K, progress.tqdm, False, not refine_text)
         return output_files
     except Exception as e:
@@ -441,6 +441,7 @@ with gr.Blocks() as demo:
                 with gr.Row():
                     num_seeds_input = gr.Number(label="生成音频的数量", value=1, precision=0, visible=False)
                     seed_input = gr.Number(label="指定种子", info="种子决定音色 0则随机", value=None, precision=0)
+                    roleid = gr.Dropdown(label="定制音色", choices=["选择音色后会覆盖种子","1", "2", "3", "4","5","6","7","21","8","9"],info="音色编号:1发姐,2纯情男大学生,3阳光开朗大男孩,4知心小姐姐,5电视台女主持,6魅力大叔,7优雅甜美,21贴心男宝2,8正式打工人,9贴心男宝1")
                     generate_audio_seed = gr.Button("\U0001F3B2")
                 with gr.Row():
                     style_select = gr.Radio(label="预设参数", info="语速部分可自行更改",
@@ -525,6 +526,7 @@ with gr.Blocks() as demo:
                 temperature_input,
                 top_P_input,
                 top_K_input,
+                roleid,
                 refine_text_input,
             ],
             outputs=[output_audio]
@@ -684,7 +686,7 @@ with gr.Blocks() as demo:
                     texts = [normalize_zh(line["txt"]) for line in batch_lines]
                     print(f"seed={seed} t={texts} c={character} s={speed} r={refine_text_prompt}")
                     wavs = generate_audio_for_seed(chat, int(seed), texts, DEFAULT_BATCH_SIZE, speed,
-                                                   refine_text_prompt, DEFAULT_TEMPERATURE, DEFAULT_TOP_P,
+                                                   refine_text_prompt,None,DEFAULT_TEMPERATURE, DEFAULT_TOP_P,
                                                    DEFAULT_TOP_K, skip_save=True)  # 批量处理文本
                     batch_results[character].extend(wavs)
 
