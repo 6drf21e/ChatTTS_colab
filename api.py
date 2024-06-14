@@ -22,6 +22,8 @@ from fastapi.responses import StreamingResponse, JSONResponse
 
 from starlette.middleware.cors import CORSMiddleware  #引入 CORS中间件模块
 
+import json
+
 #设置允许访问的域名
 origins = ["*"]  #"*"，即为所有。
 
@@ -59,8 +61,9 @@ def deterministic(seed=0):
 
 class TTS_Request(BaseModel):
     text: str = None
-    seed: int = 2581
+    seed: int = 7750
     speed: int = 3
+    roleid: str = None
     media_type: str = "wav"
     streaming: int = 0
 
@@ -156,7 +159,7 @@ def pack_audio(io_buffer:BytesIO, data:np.ndarray, rate:int, media_type:str):
     return io_buffer
 
 
-def generate_tts_audio(text_file,seed=2581,speed=3, oral=0, laugh=0, bk=4, min_length=10, batch_size=5, temperature=0.3, top_P=0.7,
+def generate_tts_audio(text_file,seed=7750,roleid=None,speed=3, oral=0, laugh=0, bk=4, min_length=10, batch_size=5, temperature=0.3, top_P=0.7,
                        top_K=20,streaming=0,cur_tqdm=None):
 
     from utils import combine_audio, save_audio, batch_split
@@ -178,8 +181,24 @@ def generate_tts_audio(text_file,seed=2581,speed=3, oral=0, laugh=0, bk=4, min_l
     refine_text_prompt = f"[oral_{oral}][laugh_{laugh}][break_{bk}]"
 
 
-    deterministic(seed)
-    rnd_spk_emb = chat.sample_random_speaker()
+
+    if not roleid:
+        deterministic(seed)
+        rnd_spk_emb = chat.sample_random_speaker()
+    else:
+
+        # 从 JSON 文件中读取数据
+        with open('./slct_voice_240605.json', 'r', encoding='utf-8') as json_file:
+            slct_idx_loaded = json.load(json_file)
+
+        # 将包含 Tensor 数据的部分转换回 Tensor 对象
+        for key in slct_idx_loaded:
+            tensor_list = slct_idx_loaded[key]["tensor"]
+            slct_idx_loaded[key]["tensor"] = torch.tensor(tensor_list)
+
+        # 将音色 tensor 打包进params_infer_code，固定使用此音色发音，调低temperature
+        rnd_spk_emb = slct_idx_loaded[roleid]["tensor"]
+
     params_infer_code = {
         'spk_emb': rnd_spk_emb,
         'prompt': f'[speed_{speed}]',
@@ -265,8 +284,10 @@ async def tts_handle(req:dict):
     print(req["streaming"])
 
     if not req["streaming"]:
+
+        print(req["roleid"])
     
-        audio_data = next(generate_tts_audio(req["text"],req["seed"]))
+        audio_data = next(generate_tts_audio(req["text"],req["seed"]),req["roleid"])
 
         # print(audio_data)
 
@@ -282,7 +303,7 @@ async def tts_handle(req:dict):
     
     else:
         
-        tts_generator = generate_tts_audio(req["text"],req["seed"],streaming=1)
+        tts_generator = generate_tts_audio(req["text"],req["seed"],roleid=req["roleid"],streaming=1)
 
         sr = 24000
 
@@ -297,14 +318,15 @@ async def tts_handle(req:dict):
 
 
 @app.get("/")
-async def tts_get(text: str = None,media_type:str = "wav",seed:int = 2581,streaming:int = 0):
+async def tts_get(text: str = None,media_type:str = "wav",seed:int = 2581,streaming:int = 0,roleid:str = None):
     req = {
         "text": text,
         "media_type": media_type,
         "seed": seed,
         "streaming": streaming,
+        "roleid": roleid,
     }
-    print("第一次")
+
     return await tts_handle(req)
 
 
