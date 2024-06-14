@@ -104,6 +104,69 @@
    ```bash
     export HF_ENDPOINT=https://hf-mirror.com
    ```
+## api接口使用
+
+启动接口服务
+
+```
+python3 api.py
+```
+
+get请求：
+
+```
+http://localhost:9880/?text=我问她月饼爱吃咸的还是甜的，那天老色鬼说,你身上的月饼，自然是甜过了蜜糖。&seed=2
+```
+
+post请求：
+
+```
+import requests
+import json
+data = json.dumps({"text":"我问她月饼爱吃咸的还是甜的，那天老色鬼说,你身上的月饼，自然是甜过了蜜糖","seed":2})
+url = "http://localhost:9880"
+headers = {"Content-Type":"application/json"}
+r = requests.post(url,data=data,headers=headers)
+audio_data = r.content
+
+with open(f"测试音频.wav","wb") as f:
+   f.write(audio_data)
+```
+
+接口支持音色向量角色参数roleid，参见webui,支持流式参数:streaming=1
+
+## 本地ollama大模型生成角色剧本
+
+下载权重：https://huggingface.co/shenzhi-wang/Mistral-7B-v0.3-Chinese-Chat-4bit
+
+新建template文件：Modelflie_mistral7b0.3.txt
+
+```
+FROM .\Mistral-7B-v0.3-Chinese-Chat-q4_0.gguf
+
+#设置模型温度（值越小回答越严谨，值越大回答越发散）
+PARAMETER temperature 0.8
+
+#设置上下文token尺寸
+PARAMETER num_ctx 4096
+
+TEMPLATE """[INST] {{ if .System }}{{ .System }} {{ end }}{{ .Prompt }} [/INST]
+"""
+
+SYSTEM """你是一名作家，文辞优美，擅长转写话剧和影视剧的剧本"""
+```
+
+导入模型:
+
+```
+ollama create nsfw -f Modelflie_mistral7b0.3.txt
+```
+
+启动服务：
+
+```
+ollama serve
+```
 
 ## 贡献
 

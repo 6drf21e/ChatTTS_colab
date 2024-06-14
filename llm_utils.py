@@ -9,6 +9,44 @@ import time
 from tqdm import tqdm
 from config import LLM_RETRIES, LLM_REQUEST_INTERVAL, LLM_RETRY_DELAY, LLM_MAX_TEXT_LENGTH, LLM_PROMPT
 
+import requests
+
+
+def ollama_generate(url,model,text):
+    from config import LLM_PROMPT
+
+
+    LLM_PROMPT += f"\n注意，只返回json即可，不要返回其他格式\n{text}"
+
+    data = {
+    "model":model,
+    "prompt":LLM_PROMPT,
+    "stream":False
+    }
+
+    data = json.dumps(data)
+    headers = {"Content-Type":"application/json"}#指定提交的是json
+    r = requests.post(url,data=data,headers=headers)
+
+    try:
+        res = json.loads(r.text)
+
+        clist = json.loads(res["response"].replace("```json","").replace("```",""))
+
+        texts = ""
+
+        for x in clist:
+
+            texts += f"{x['character']}::{x['txt']}\n"
+    except Exception as e:
+
+        print(str(e))
+
+        texts = "报错了，请重新生成 \n"
+
+
+    return texts
+
 
 def send_request(client, prompt, text, model):
     text = remove_json_escape_characters(text)
