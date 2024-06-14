@@ -17,6 +17,8 @@ from tts_model import load_chat_tts_model, clear_cuda_cache, deterministic, gene
 from config import DEFAULT_BATCH_SIZE, DEFAULT_SPEED, DEFAULT_TEMPERATURE, DEFAULT_TOP_K, DEFAULT_TOP_P, DEFAULT_ORAL, \
     DEFAULT_LAUGH, DEFAULT_BK, DEFAULT_SEG_LENGTH
 
+from llm_utils import ollama_generate
+
 parser = argparse.ArgumentParser(description="Gradio ChatTTS MIX")
 parser.add_argument("--source", type=str, default="huggingface", help="Model source: 'huggingface' or 'local'.")
 parser.add_argument("--local_path", type=str, help="Path to local model if source is 'local'.")
@@ -55,6 +57,15 @@ max_audio_components = 10
 # chat.load_models(source="local", local_path="models")
 # torch.cuda.empty_cache()
 
+def file_show(file):
+    if file is None:
+        return ""
+    try:
+      with open(file.name, "r", encoding="utf-8") as f:
+         text = f.read()
+      return text
+    except Exception as error:
+        return error
 
 # 加载
 def load_seeds():
@@ -435,7 +446,8 @@ with gr.Blocks() as demo:
                     break_button = gr.Button("+停顿", variant="secondary")
                     laugh_button = gr.Button("+笑声", variant="secondary")
                 refine_button = gr.Button("Refine Text（预处理 加入停顿词、笑声等）", variant="secondary")
-
+                srt_file = gr.File(label="上传文本",file_types=['.txt'],file_count='single')
+            srt_file.change(file_show,inputs=[srt_file],outputs=[text_file_input])
             with gr.Column():
                 gr.Markdown("### 配置参数")
                 with gr.Row():
@@ -587,7 +599,8 @@ with gr.Blocks() as demo:
                 "gpt-3.5-turbo-0125": ["https://api.openai.com/v1"],
                 "gpt-4o": ["https://api.openai.com/v1"],
                 "deepseek-chat": ["https://api.deepseek.com"],
-                "yi-large": ["https://api.lingyiwanwu.com/v1"]
+                "yi-large": ["https://api.lingyiwanwu.com/v1"],
+                "本地ollama": ["http://localhost:11434/api/generate"]
             }
             if model in llm_setting:
                 return llm_setting[model][0]
@@ -775,7 +788,7 @@ with gr.Blocks() as demo:
 
                 with gr.Row(equal_height=True):
                     # 选择模型 只有 gpt4o deepseek-chat yi-large 三个选项
-                    model_select = gr.Radio(label="选择模型", choices=["gpt-4o", "deepseek-chat", "yi-large"],
+                    model_select = gr.Radio(label="选择模型", choices=["gpt-4o", "deepseek-chat", "yi-large","本地ollama"],
                                             value="gpt-4o", interactive=True, )
                 with gr.Row(equal_height=True):
                     openai_api_base_input = gr.Textbox(label="OpenAI API Base URL",
@@ -783,12 +796,14 @@ with gr.Blocks() as demo:
                                                        value=r"https://api.openai.com/v1")
                     openai_api_key_input = gr.Textbox(label="OpenAI API Key", placeholder="请输入API Key",
                                                       value="sk-xxxxxxx",type="password")
+                    ollama_model = gr.Textbox(label="ollama本地模型名称",value="nsfw")
                 # AI提示词
                 ai_text_input = gr.Textbox(label="剧情简介或者一段故事", placeholder="请输入文本...", lines=2,
                                            value=ai_text_default)
 
                 # 生成脚本的按钮
                 ai_script_generate_button = gr.Button("AI脚本生成")
+                ai_script_generate_button_ollama = gr.Button("本地Ollama模型AI脚本生成")
 
             with gr.Column(scale=3):
                 gr.Markdown("### 脚本")
@@ -842,6 +857,12 @@ with gr.Blocks() as demo:
         ai_script_generate_button.click(
             ai_script_generate,
             inputs=[model_select, openai_api_base_input, openai_api_key_input, ai_text_input],
+            outputs=[script_text_input]
+        )
+        # AI脚本生成 ollama
+        ai_script_generate_button_ollama.click(
+            ollama_generate,
+            inputs=[openai_api_base_input,ollama_model,ai_text_input],
             outputs=[script_text_input]
         )
         # 音频生成
