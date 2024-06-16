@@ -4,7 +4,7 @@
 
 | 版本       | 地址                                                                                                                                                                             | 介绍                                                  |
 |----------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------|
-| 在线Colab版 | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/6drf21e/ChatTTS_colab/blob/main/chattts_webui_mix.ipynb) | 可以在 Google Colab 上一键运行，需要 Google账号，Colib 自带15GB的GPU |
+| 在线Colab版 | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/6drf21e/ChatTTS_colab/blob/main/chattts_webui_mix.ipynb) | 可以在 Google Colab 上一键运行，需要 Google账号，Colab 自带15GB的GPU |
 | 离线整合版    | [百度网盘](https://pan.baidu.com/s/1-hGiPLs6ORM8sZv0xTdxFA?pwd=h3c5) 提取码: h3c5                                                                                                     | 下载本地运行，支持 GPU/CPU，适用 Windows 10 及以上                 |
 | 离线整合版    | [夸克网盘](https://pan.quark.cn/s/c963e147f204)                                                                                                                                    | 下载本地运行，支持 GPU/CPU，适用 Windows 10 及以上                 |
 
