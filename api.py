@@ -156,12 +156,12 @@ def pack_audio(io_buffer:BytesIO, data:np.ndarray, rate:int, media_type:str):
     return io_buffer
 
 
-def generate_tts_audio(text_file,seed=2581,speed=3, oral=0, laugh=0, bk=4, min_length=10, batch_size=5, temperature=0.3, top_P=0.7,
+def generate_tts_audio(text_file,seed=2,speed=3, oral=0, laugh=0, bk=4, min_length=80, batch_size=5, temperature=0.3, top_P=0.7,
                        top_K=20,streaming=0,cur_tqdm=None):
 
     from utils import combine_audio, save_audio, batch_split
 
-    from utils import split_text
+    from utils import split_text, replace_tokens, restore_tokens
 
 
     if seed in [0, -1, None]:
@@ -169,8 +169,12 @@ def generate_tts_audio(text_file,seed=2581,speed=3, oral=0, laugh=0, bk=4, min_l
 
     
     content = text_file
+
+    # 将  [uv_break]  [laugh] 替换为 _uv_break_ _laugh_ 处理后再还原
+    content = replace_tokens(content)
     texts = split_text(content, min_length=min_length)
-    
+    for i, text in enumerate(texts):
+        texts[i] = restore_tokens(text)
 
     if oral < 0 or oral > 9 or laugh < 0 or laugh > 2 or bk < 0 or bk > 7:
         raise ValueError("oral_(0-9), laugh_(0-2), break_(0-7) out of range")
