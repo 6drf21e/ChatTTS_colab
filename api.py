@@ -12,7 +12,7 @@ from tqdm import tqdm
 import random
 import os
 import json
-from utils import batch_split
+from utils import batch_split,normalize_zh
 import torch
 import soundfile as sf
 import wave
@@ -111,7 +111,8 @@ def wave_header_chunk(frame_input=b"", channels=1, sample_width=2, sample_rate=2
 
 ### modify from https://github.com/RVC-Boss/GPT-SoVITS/pull/894/files
 def pack_ogg(io_buffer:BytesIO, data:np.ndarray, rate:int):
-    with sf.SoundFile(io_buffer, mode='w', samplerate=rate, channels=1, format='ogg') as audio_file:
+
+    with sf.SoundFile(io_buffer, mode='w',samplerate=rate, channels=1, format='ogg') as audio_file:
         audio_file.write(data)
     return io_buffer
 
@@ -125,6 +126,7 @@ def pack_wav(io_buffer:BytesIO, data:np.ndarray, rate:int):
     io_buffer = BytesIO()
     sf.write(io_buffer, data, rate, format='wav')
     return io_buffer
+
 
 def pack_aac(io_buffer:BytesIO, data:np.ndarray, rate:int):
     process = subprocess.Popen([
@@ -144,6 +146,7 @@ def pack_aac(io_buffer:BytesIO, data:np.ndarray, rate:int):
     return io_buffer
 
 def pack_audio(io_buffer:BytesIO, data:np.ndarray, rate:int, media_type:str):
+    
     if media_type == "ogg":
         io_buffer = pack_ogg(io_buffer, data, rate)
     elif media_type == "aac":
@@ -156,7 +159,7 @@ def pack_audio(io_buffer:BytesIO, data:np.ndarray, rate:int, media_type:str):
     return io_buffer
 
 
-def generate_tts_audio(text_file,seed=2,speed=3, oral=0, laugh=0, bk=4, min_length=80, batch_size=5, temperature=0.3, top_P=0.7,
+def generate_tts_audio(text_file,seed=2581,speed=1, oral=0, laugh=0, bk=4, min_length=80, batch_size=5, temperature=0.01, top_P=0.7,
                        top_K=20,streaming=0,cur_tqdm=None):
 
     from utils import combine_audio, save_audio, batch_split
@@ -169,6 +172,13 @@ def generate_tts_audio(text_file,seed=2,speed=3, oral=0, laugh=0, bk=4, min_leng
 
     
     content = text_file
+    # texts = split_text(content, min_length=min_length)
+    
+
+    # if oral < 0 or oral > 9 or laugh < 0 or laugh > 2 or bk < 0 or bk > 7:
+    #     raise ValueError("oral_(0-9), laugh_(0-2), break_(0-7) out of range")
+
+    # refine_text_prompt = f"[oral_{oral}][laugh_{laugh}][break_{bk}]"
 
     # 将  [uv_break]  [laugh] 替换为 _uv_break_ _laugh_ 处理后再还原
     content = replace_tokens(content)
@@ -210,11 +220,10 @@ def generate_tts_audio(text_file,seed=2,speed=3, oral=0, laugh=0, bk=4, min_leng
         all_wavs = []
 
 
-
         for batch in cur_tqdm(batch_split(texts, batch_size), desc=f"Inferring audio for seed={seed}"):
 
-            
-            wavs = chat.infer(batch, params_infer_code=params_infer_code, params_refine_text=params_refine_text,use_decoder=True, skip_refine_text=False)
+            print(batch)            
+            wavs = chat.infer(batch, params_infer_code=params_infer_code, params_refine_text=params_refine_text,use_decoder=True, skip_refine_text=True)
             audio_data = wavs[0][0]
             audio_data = audio_data / np.max(np.abs(audio_data))
 
@@ -242,23 +251,27 @@ def generate_tts_audio(text_file,seed=2,speed=3, oral=0, laugh=0, bk=4, min_leng
 
         print("流式生成")
 
-        texts = cut5(content)
+        texts = [normalize_zh(_) for _ in content.split('\n') if _.strip()]
+
 
         for text in texts:
 
-            print(text)
+            wavs_gen = chat.infer(text, params_infer_code=params_infer_code, params_refine_text=params_refine_text,use_decoder=True, skip_refine_text=True,stream=True)
 
-            wavs = chat.infer(text, params_infer_code=params_infer_code, params_refine_text=params_refine_text,use_decoder=True, skip_refine_text=False)
-            audio_data = wavs[0][0]
-            audio_data = audio_data / np.max(np.abs(audio_data))
-            audio_data = (audio_data * 32767).astype(np.int16)
+            for gen in wavs_gen:
+                wavs = [np.array([[]])]
+                wavs[0] = np.hstack([wavs[0], np.array(gen[0])])
+                audio_data = wavs[0][0]
 
-            clear_cuda_cache()
+                audio_data = audio_data / np.max(np.abs(audio_data))
 
-            yield audio_data
+                
+                
+                yield (audio_data * 32767).astype(np.int16)
 
+        # clear_cuda_cache()
 
-            
+        
 
 
 
@@ -267,6 +280,7 @@ async def tts_handle(req:dict):
     media_type = req["media_type"]
 
     print(req["streaming"])
+    print(req["media_type"])
 
     if not req["streaming"]:
     
@@ -295,9 +309,11 @@ async def tts_handle(req:dict):
                 yield wave_header_chunk()
                 media_type = "raw"
             for chunk in tts_generator:
+                print(chunk)
                 yield pack_audio(BytesIO(), chunk, sr, media_type).getvalue()
 
-        return StreamingResponse(streaming_generator(tts_generator, media_type, ), media_type=f"audio/{media_type}")
+        return StreamingResponse(streaming_generator(tts_generator, media_type), media_type=f"audio/{media_type}")
+
 
 
 @app.get("/")
@@ -308,7 +324,6 @@ async def tts_get(text: str = None,media_type:str = "wav",seed:int = 2581,stream
         "seed": seed,
         "streaming": streaming,
     }
-    print("第一次")
     return await tts_handle(req)
 
 
