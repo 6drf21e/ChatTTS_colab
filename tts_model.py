@@ -23,7 +23,7 @@ def load_chat_tts_model(source='huggingface', force_redownload=False, local_path
     """
     print("Loading ChatTTS model...")
     chat = ChatTTS.Chat()
-    chat.load_models(source=source, force_redownload=force_redownload, custom_path=local_path)
+    chat.load_models(source=source, force_redownload=force_redownload, custom_path=local_path, compile=False)
     return chat
 
 
