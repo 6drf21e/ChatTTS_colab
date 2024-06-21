@@ -12,11 +12,12 @@ from tqdm import tqdm
 import random
 import gradio as gr
 import json
-from utils import batch_split, normalize_zh
+from utils import normalize_zh, batch_split, normalize_audio, combine_audio
 from tts_model import load_chat_tts_model, clear_cuda_cache, generate_audio_for_seed
 from config import DEFAULT_BATCH_SIZE, DEFAULT_SPEED, DEFAULT_TEMPERATURE, DEFAULT_TOP_K, DEFAULT_TOP_P, DEFAULT_ORAL, \
     DEFAULT_LAUGH, DEFAULT_BK, DEFAULT_SEG_LENGTH
 import torch
+from copy import deepcopy
 
 parser = argparse.ArgumentParser(description="Gradio ChatTTS MIX")
 parser.add_argument("--source", type=str, default="huggingface", help="Model source: 'huggingface' or 'local'.")
@@ -49,13 +50,6 @@ chat = load_chat_tts_model(source=args.source, local_path=args.local_path)
 
 # 抽卡的最大数量
 max_audio_components = 10
-
-
-# print("loading ChatTTS model...")
-# chat = ChatTTS.Chat()
-# chat.load_models(source="local", local_path="models")
-# torch.cuda.empty_cache()
-
 
 # 加载
 def load_seeds():
@@ -304,8 +298,11 @@ def generate_tts_audio(text_file, num_seeds, seed, speed, oral, laugh, bk, min_l
     except Exception as e:
         raise e
 
-def generate_tts_audio_stream(text_file, num_seeds, seed, speed, oral, laugh, bk, min_length, batch_size, temperature, top_P,
-                       top_K, roleid=None, refine_text=True, speaker_type="seed", pt_file=None):
+
+def generate_tts_audio_stream(text_file, num_seeds, seed, speed, oral, laugh, bk, min_length, batch_size, temperature,
+                              top_P,
+                              top_K, roleid=None, refine_text=True, speaker_type="seed", pt_file=None,
+                              stream_mode="fake"):
     from utils import split_text, replace_tokens, restore_tokens
     from tts_model import deterministic
     if seed in [0, -1, None]:
@@ -317,12 +314,11 @@ def generate_tts_audio_stream(text_file, num_seeds, seed, speed, oral, laugh, bk
         content = text_file
     # 将  [uv_break]  [laugh] 替换为 _uv_break_ _laugh_ 处理后再还原
     content = replace_tokens(content)
-    texts = [normalize_zh(_) for _ in content.split('\n') if _.strip()]
+    # texts = [normalize_zh(_) for _ in content.split('\n') if _.strip()]
+    texts = split_text(content, min_length=min_length)
 
     for i, text in enumerate(texts):
         texts[i] = restore_tokens(text)
-
-    print(texts)
 
     if oral < 0 or oral > 9 or laugh < 0 or laugh > 2 or bk < 0 or bk > 7:
         raise ValueError("oral_(0-9), laugh_(0-2), break_(0-7) out of range")
@@ -368,27 +364,26 @@ def generate_tts_audio_stream(text_file, num_seeds, seed, speed, oral, laugh, bk
         'top_K': top_K,
         'temperature': temperature
     }
-    
 
-    for text in texts:
+    if stream_mode == "real":
+        for text in texts:
+            _params_infer_code = deepcopy(params_infer_code)
+            wavs_gen = chat.infer(text, params_infer_code=_params_infer_code, params_refine_text=params_refine_text,
+                                  use_decoder=True, skip_refine_text=True, stream=True)
+            for gen in wavs_gen:
+                wavs = [np.array([[]])]
+                wavs[0] = np.hstack([wavs[0], np.array(gen[0])])
+                audio = wavs[0][0]
+                yield 24000, normalize_audio(audio)
 
-        wavs_gen = chat.infer(text, params_infer_code=params_infer_code, params_refine_text=params_refine_text,
-                            use_decoder=True, skip_refine_text=True,stream=True)
-        
-        for gen in wavs_gen:
-            wavs = [np.array([[]])]
-            wavs[0] = np.hstack([wavs[0], np.array(gen[0])])
-            audio = wavs[0][0]
-            
-            max_audio = np.abs(audio).max()  # 简单防止16bit爆音
-            if max_audio > 1:
-                audio /= max_audio
-
-            yield 24000,(audio * 32768).astype(np.int16)
-
-        clear_cuda_cache()
-
-
+            clear_cuda_cache()
+    else:
+        for text in batch_split(texts, batch_size):
+            _params_infer_code = deepcopy(params_infer_code)
+            wavs = chat.infer(text, params_infer_code=_params_infer_code, params_refine_text=params_refine_text,
+                              use_decoder=True, skip_refine_text=False, stream=False)
+            combined_audio = combine_audio(wavs)
+            yield 24000, combined_audio[0]
 
 
 def generate_refine(text_file, oral, laugh, bk, temperature, top_P, top_K, progress=gr.Progress()):
@@ -460,6 +455,10 @@ with gr.Blocks() as demo:
                 ]
                 # gr.Markdown("### 随机音色抽卡")
                 gr.Markdown("""
+                免抽卡，直接找稳定音色👇
+                
+                [ModelScope ChatTTS Speaker(国内)](https://modelscope.cn/studios/ttwwwaa/ChatTTS_Speaker) | [HuggingFace ChatTTS Speaker(国外)](https://huggingface.co/spaces/taa/ChatTTS_Speaker) 
+
                 在相同的 seed 和 温度等参数下，音色具有一定的一致性。点击下面的“随机音色生成”按钮将生成多个 seed。找到满意的音色后，点击音频下方“保存”按钮。
                 **注意：不同机器使用相同种子生成的音频音色可能不同，同一机器使用相同种子多次生成的音频音色也可能变化。**
                 """)
@@ -572,7 +571,8 @@ with gr.Blocks() as demo:
 
                 with gr.Row():
                     style_select = gr.Radio(label="预设参数", info="语速部分可自行更改",
-                                            choices=["小说朗读", "闲聊", "默认"], interactive=True, )
+                                            choices=["小说朗读", "对话", "中英混合", "默认"], value="默认",
+                                            interactive=True, )
                 with gr.Row():
                     # refine
                     refine_text_input = gr.Checkbox(label="Refine",
@@ -600,16 +600,22 @@ with gr.Blocks() as demo:
                         reset_button = gr.Button("重置")
 
         with gr.Row():
-            generate_button = gr.Button("生成音频", variant="primary")
-            generate_button_stream = gr.Button("流式生成音频(一边播放一边推理)", variant="primary")
+            with gr.Column():
+                generate_button = gr.Button("生成音频", variant="primary")
+            with gr.Column():
+                generate_button_stream = gr.Button("流式生成音频(一边播放一边推理)", variant="primary")
+                stream_select = gr.Radio(label="流输出方式",
+                                         info="真流式为实验功能，播放效果：卡播卡播卡播（⏳🎵⏳🎵⏳🎵）；伪流式为分段推理后输出，播放效果：卡卡卡播播播播（⏳⏳🎵🎵🎵🎵）。伪流式批次建议4以上减少卡顿",
+                                         choices=[("真", "real"), ("伪", "fake")], value="fake", interactive=True, )
 
         with gr.Row():
             output_audio = gr.Audio(label="生成的音频文件")
-            output_audio_stream = gr.Audio(label="流式音频",value=None,
-            streaming=True,
-            autoplay=True,  # disable auto play for Windows, due to https://developer.chrome.com/blog/autoplay#webaudio
-            interactive=False,
-            show_label=True)
+            output_audio_stream = gr.Audio(label="流式音频", value=None,
+                                           streaming=True,
+                                           autoplay=True,
+                                           # disable auto play for Windows, due to https://developer.chrome.com/blog/autoplay#webaudio
+                                           interactive=False,
+                                           show_label=True)
 
         generate_audio_seed.click(generate_seed,
                                   inputs=[],
@@ -634,8 +640,10 @@ with gr.Blocks() as demo:
         def do_style_select(x):
             if x == "小说朗读":
                 return [4, 0, 0, 2]
-            elif x == "闲聊":
+            elif x == "对话":
                 return [5, 5, 1, 4]
+            elif x == "中英混合":
+                return [4, 1, 0, 3]
             else:
                 return [DEFAULT_SPEED, DEFAULT_ORAL, DEFAULT_LAUGH, DEFAULT_BK]
 
@@ -701,7 +709,8 @@ with gr.Blocks() as demo:
                 roleid_input,
                 refine_text_input,
                 speaker_stat,
-                pt_input
+                pt_input,
+                stream_select
             ],
             outputs=[output_audio_stream]
         )

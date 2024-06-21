@@ -222,11 +222,18 @@ def split_text(text, min_length=60):
 def normalize_en(text):
     from tn.english.normalizer import Normalizer
     normalizer = Normalizer()
-    return remove_english_punctuation(normalizer.normalize(text))
+    text = normalizer.normalize(text)
+    text = remove_english_punctuation(text)
+    return text
 
 
 def normalize_zh(text):
-    return process_ddd(text_normalize(remove_chinese_punctuation(text)))
+    from tn.chinese.normalizer import Normalizer
+    normalizer = Normalizer()
+    text = normalizer.normalize(text)
+    text = remove_chinese_punctuation(text)
+    text = process_ddd(text)
+    return text
 
 
 def batch_split(items, batch_size=5):
