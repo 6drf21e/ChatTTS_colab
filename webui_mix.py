@@ -17,7 +17,6 @@ from tts_model import load_chat_tts_model, clear_cuda_cache, generate_audio_for_
 from config import DEFAULT_BATCH_SIZE, DEFAULT_SPEED, DEFAULT_TEMPERATURE, DEFAULT_TOP_K, DEFAULT_TOP_P, DEFAULT_ORAL, \
     DEFAULT_LAUGH, DEFAULT_BK, DEFAULT_SEG_LENGTH
 import torch
-from copy import deepcopy
 
 parser = argparse.ArgumentParser(description="Gradio ChatTTS MIX")
 parser.add_argument("--source", type=str, default="huggingface", help="Model source: 'huggingface' or 'local'.")
@@ -367,7 +366,7 @@ def generate_tts_audio_stream(text_file, num_seeds, seed, speed, oral, laugh, bk
 
     if stream_mode == "real":
         for text in texts:
-            _params_infer_code = deepcopy(params_infer_code)
+            _params_infer_code = {**params_infer_code}
             wavs_gen = chat.infer(text, params_infer_code=_params_infer_code, params_refine_text=params_refine_text,
                                   use_decoder=True, skip_refine_text=True, stream=True)
             for gen in wavs_gen:
@@ -379,7 +378,7 @@ def generate_tts_audio_stream(text_file, num_seeds, seed, speed, oral, laugh, bk
             clear_cuda_cache()
     else:
         for text in batch_split(texts, batch_size):
-            _params_infer_code = deepcopy(params_infer_code)
+            _params_infer_code = {**params_infer_code}
             wavs = chat.infer(text, params_infer_code=_params_infer_code, params_refine_text=params_refine_text,
                               use_decoder=True, skip_refine_text=False, stream=False)
             combined_audio = combine_audio(wavs)

@@ -126,7 +126,7 @@ def remove_english_punctuation(text):
 
 def text_normalize(text):
     """
-    对文本进行归一化处理
+    对文本进行归一化处理 （PaddlePaddle版本）
     :param text:
     :return:
     """
@@ -134,14 +134,7 @@ def text_normalize(text):
     # ref: https://github.com/PaddlePaddle/PaddleSpeech/tree/develop/paddlespeech/t2s/frontend/zh_normalization
     tx = TextNormalizer()
     sentences = tx.normalize(text)
-    # print(sentences)
-
     _txt = ''.join(sentences)
-    # 替换掉除中文之外的所有字符
-    # _txt = re.sub(
-    #     r"[^\u4e00-\u9fa5，。！？、]+", "", _txt
-    # )
-
     return _txt
 
 
@@ -191,12 +184,9 @@ def split_text(text, min_length=60):
         if len(paragraph.strip()) < min_length:
             result.append(paragraph.strip())
             continue
-        print('paragraph', paragraph)
         # 大于的再计算拆分
         sentences = re.split(sentence_delimiters, paragraph)
         current_sentence = ''
-        print('sentences', sentences)
-
         for sentence in sentences:
             if re.match(sentence_delimiters, sentence):
                 current_sentence += sentence.strip() + ''
@@ -211,7 +201,6 @@ def split_text(text, min_length=60):
                 result[-1] += current_sentence
             else:
                 result.append(current_sentence)
-    print("result", result)
     if detect_language(text[:1024]) == "zh":
         result = [normalize_zh(_.strip()) for _ in result if _.strip()]
     else:
@@ -220,18 +209,20 @@ def split_text(text, min_length=60):
 
 
 def normalize_en(text):
-    from tn.english.normalizer import Normalizer
-    normalizer = Normalizer()
-    text = normalizer.normalize(text)
-    text = remove_english_punctuation(text)
+    # 不再在 ChatTTS 外正则化文本
+    # from tn.english.normalizer import Normalizer
+    # normalizer = Normalizer()
+    # text = normalizer.normalize(text)
+    # text = remove_english_punctuation(text)
     return text
 
 
 def normalize_zh(text):
-    from tn.chinese.normalizer import Normalizer
-    normalizer = Normalizer()
-    text = normalizer.normalize(text)
-    text = remove_chinese_punctuation(text)
+    # 不再在 ChatTTS 外正则化文本
+    # from tn.chinese.normalizer import Normalizer
+    # normalizer = Normalizer()
+    # text = normalizer.normalize(text)
+    # text = remove_chinese_punctuation(text)
     text = process_ddd(text)
     return text
 

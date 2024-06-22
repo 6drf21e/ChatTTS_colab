@@ -3,7 +3,6 @@ import json
 import os
 import re
 import time
-from copy import deepcopy
 
 import numpy as np
 import torch
@@ -107,7 +106,7 @@ def generate_audio_for_seed(chat, seed, texts, batch_size, speed, refine_text_pr
 
     for batch in cur_tqdm(batch_split(texts, batch_size), desc=f"Inferring audio for seed={seed}"):
         flag += len(batch)
-        _params_infer_code = deepcopy(params_infer_code)
+        _params_infer_code = {**params_infer_code}
         wavs = chat.infer(batch, params_infer_code=_params_infer_code, params_refine_text=params_refine_text,
                           use_decoder=True, skip_refine_text=skip_refine_text)
         all_wavs.extend(wavs)
