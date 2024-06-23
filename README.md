@@ -2,18 +2,19 @@
 
 # ChatTTS_colab
 
-🚀 一键部署（含win离线整合包）！基于 [ChatTTS](https://github.com/2noise/ChatTTS)  ，支持流式输出、音色抽卡、长音频生成和分角色朗读。简单易用，无需复杂安装。
+🚀 一键部署 简单易用 无需复杂安装（含win离线整合包）
+
+基于 [**ChatTTS**](https://github.com/2noise/ChatTTS) ，支持流式输出、音色抽卡、长音频生成和分角色朗读。
 
 [![Open In Colab](https://img.shields.io/badge/Open%20In-Colab-orange?style=for-the-badge)](https://colab.research.google.com/github/6drf21e/ChatTTS_colab/blob/main/chattts_webui_mix.ipynb)
 
 
-**🏆 稳定说话人音色库/区分男女已开源 🏆**  项目地址： [ChatTTS_Speaker](https://github.com/6drf21e/ChatTTS_Speaker)
+**🏆稳定说话人音色库/区分男女已开源**  项目地址： [ChatTTS_Speaker](https://github.com/6drf21e/ChatTTS_Speaker)
 
-[![Open In ModeScope](https://img.shields.io/badge/Open%20In-ModeScope-blue?style=for-the-badge)](https://modelscope.cn/studios/ttwwwaa/ChatTTS_Speaker)
-[![Huggingface](https://img.shields.io/badge/🤗%20-Models-yellow.svg?style=for-the-badge)](https://huggingface.co/spaces/taa/ChatTTS_Speaker)
+[![Open In ModeScope](https://img.shields.io/badge/Open%20In-modelscope-blue?style=for-the-badge)](https://modelscope.cn/studios/ttwwwaa/ChatTTS_Speaker)
+[![Huggingface](https://img.shields.io/badge/🤗%20-Spaces-yellow.svg?style=for-the-badge)](https://huggingface.co/spaces/taa/ChatTTS_Speaker)
 
-
-> 支持按男女、年龄、特征查找稳定音色。
+支持按男女、年龄、特征查找稳定音色。
 
 </div>
 
