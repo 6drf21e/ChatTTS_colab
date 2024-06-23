@@ -1,21 +1,31 @@
+<div align="center">
+
 # ChatTTS_colab
 
-🚀 一键部署（含win离线整合包）！基于 [ChatTTS](https://github.com/2noise/ChatTTS)  ，支持音色抽卡、长音频生成和分角色朗读。简单易用，无需复杂安装。。
+🚀 一键部署（含win离线整合包）！基于 [ChatTTS](https://github.com/2noise/ChatTTS)  ，支持流式输出、音色抽卡、长音频生成和分角色朗读。简单易用，无需复杂安装。
 
-**🏆 2000条说话人音色库已开源 🏆**  项目地址： [ChatTTS_Speaker](https://github.com/6drf21e/ChatTTS_Speaker)
+[![Open In Colab](https://img.shields.io/badge/Open%20In-Colab-orange?style=for-the-badge)](https://colab.research.google.com/github/6drf21e/ChatTTS_colab/blob/main/chattts_webui_mix.ipynb)
+
+
+**🏆 稳定说话人音色库/区分男女已开源 🏆**  项目地址： [ChatTTS_Speaker](https://github.com/6drf21e/ChatTTS_Speaker)
+
+[![Open In ModeScope](https://img.shields.io/badge/Open%20In-ModeScope-blue?style=for-the-badge)](https://modelscope.cn/studios/ttwwwaa/ChatTTS_Speaker)
+[![Huggingface](https://img.shields.io/badge/🤗%20-Models-yellow.svg?style=for-the-badge)](https://huggingface.co/spaces/taa/ChatTTS_Speaker)
+
 
 > 支持按男女、年龄、特征查找稳定音色。
 
-# 下载地址
+</div>
 
-| 版本       | 地址                                                                                                                                                                             | 介绍                                                  |
-|----------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------|
-| 在线Colab版 | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/6drf21e/ChatTTS_colab/blob/main/chattts_webui_mix.ipynb) | 可以在 Google Colab 上一键运行，需要 Google账号，Colab 自带15GB的GPU |
-| 离线整合版    | [百度网盘](https://pan.baidu.com/s/1-hGiPLs6ORM8sZv0xTdxFA?pwd=h3c5) 提取码: h3c5                                                                                                     | 下载本地运行，支持 GPU/CPU，适用 Windows 10 及以上                 |
-| 离线整合版    | [夸克网盘](https://pan.quark.cn/s/c963e147f204)                                                                                                                                    | 下载本地运行，支持 GPU/CPU，适用 Windows 10 及以上                 |
-| 离线整合版    | [123盘](https://www.123pan.com/s/Fto1jv-CjUI.html)                                                                                                                              | 下载本地运行，支持 GPU/CPU，适用 Windows 10 及以上                 |
+## 整合版下载地址
 
-# 演示视频
+| 版本       | 地址                                                                                                                                                                             |
+|----------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| 百度网盘    | [百度网盘](https://pan.baidu.com/s/1-hGiPLs6ORM8sZv0xTdxFA?pwd=h3c5) 提取码: h3c5                                                                                                     | 
+| 夸克网盘    | [夸克网盘](https://pan.quark.cn/s/c963e147f204)                                                                                                                                    | 
+| 123盘    | [123盘](https://www.123pan.com/s/Fto1jv-CjUI.html)                                                                                                                              |
+
+## 演示视频
 
 [![演示视频](https://img.youtube.com/vi/199fyU7NfUQ/0.jpg)](https://www.youtube.com/watch?v=199fyU7NfUQ)
 
@@ -28,8 +38,13 @@
 - **支持生成长音频**：适合生成较长的语音内容。
 - **字符处理**：对数字和朗读错误的标点做了初步处理。
 - **分角色朗读功能** ：支持对不同角色的文本进行分角色朗读，并支持大模型一键生产脚本。
+- **支持流输出**：边生成边播放，无需等待全部生成完毕。
 
 ## 功能展示
+
+### 支持流输出
+
+![支持流输出](assets/shot4.png)
 
 ### 分角色朗读功能
 
@@ -112,9 +127,9 @@
     export HF_ENDPOINT=https://hf-mirror.com
    ```
 
-## 贡献
+## 贡献者列表
 
-欢迎对本项目提出建议或贡献代码。请通过 GitHub Issues 提出问题，或提交 Pull Request。
+[![contributors](https://contrib.rocks/image?repo=6drf21e/ChatTTS_colab)](https://github.com/6drf21e/ChatTTS_colab/graphs/contributors)
 
 ## 许可证
 
