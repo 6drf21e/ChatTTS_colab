@@ -13,6 +13,7 @@
 | 在线Colab版 | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/6drf21e/ChatTTS_colab/blob/main/chattts_webui_mix.ipynb) | 可以在 Google Colab 上一键运行，需要 Google账号，Colab 自带15GB的GPU |
 | 离线整合版    | [百度网盘](https://pan.baidu.com/s/1-hGiPLs6ORM8sZv0xTdxFA?pwd=h3c5) 提取码: h3c5                                                                                                     | 下载本地运行，支持 GPU/CPU，适用 Windows 10 及以上                 |
 | 离线整合版    | [夸克网盘](https://pan.quark.cn/s/c963e147f204)                                                                                                                                    | 下载本地运行，支持 GPU/CPU，适用 Windows 10 及以上                 |
+| 离线整合版    | [123盘](https://www.123pan.com/s/Fto1jv-CjUI.html)                                                                                                                              | 下载本地运行，支持 GPU/CPU，适用 Windows 10 及以上                 |
 
 # 演示视频
 
@@ -106,7 +107,7 @@
    ```bash
       python webui_mix.py --source local --local_path models
    ```
-2. 如果下载模型速度慢，建议使用赛博活菩萨 [@padeoe](https://github.com/padeoe) 的镜像加速 https://hf-mirror.com/ 
+2. 如果下载模型速度慢，建议使用赛博活菩萨 [@padeoe](https://github.com/padeoe) 的镜像加速 https://hf-mirror.com/
    ```bash
     export HF_ENDPOINT=https://hf-mirror.com
    ```
