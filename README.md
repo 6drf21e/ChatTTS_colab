@@ -8,7 +8,6 @@
 
 [![Open In Colab](https://img.shields.io/badge/Open%20In-Colab-orange?style=for-the-badge)](https://colab.research.google.com/github/6drf21e/ChatTTS_colab/blob/main/chattts_webui_mix.ipynb)
 
-
 **🏆稳定说话人音色库/区分男女已开源**  项目地址： [ChatTTS_Speaker](https://github.com/6drf21e/ChatTTS_Speaker)
 
 [![Open In ModeScope](https://img.shields.io/badge/Open%20In-modelscope-blue?style=for-the-badge)](https://modelscope.cn/studios/ttwwwaa/ChatTTS_Speaker)
@@ -20,11 +19,12 @@
 
 ## 整合版下载地址
 
-| 版本       | 地址                                                                                                                                                                             |
-|----------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| 百度网盘    | [百度网盘](https://pan.baidu.com/s/1-hGiPLs6ORM8sZv0xTdxFA?pwd=h3c5) 提取码: h3c5                                                                                                     | 
-| 夸克网盘    | [夸克网盘](https://pan.quark.cn/s/c963e147f204)                                                                                                                                    | 
-| 123盘    | [123盘](https://www.123pan.com/s/Fto1jv-CjUI.html)                                                                                                                              |
+| 版本          | 地址                                                                         |
+|-------------|----------------------------------------------------------------------------|
+| 百度网盘        | [百度网盘](https://pan.baidu.com/s/1-hGiPLs6ORM8sZv0xTdxFA?pwd=h3c5) 提取码: h3c5 | 
+| 夸克网盘        | [夸克网盘](https://pan.quark.cn/s/c963e147f204)                                | 
+| 123盘        | [123盘](https://www.123pan.com/s/Fto1jv-CjUI.html)                          |
+| Huggingface | [🤗Huggingface](https://huggingface.co/taa/ChatTTS_colab/tree/main)        |
 
 ## 演示视频
 
