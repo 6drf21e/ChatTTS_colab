@@ -354,7 +354,7 @@ async def tts_to_audio(request: TTS_Request):
 
 if __name__ == "__main__":
 
-    chat.load_models(source="local", local_path="models")
+    chat.load_models(source="custom", custom_path="models", compile=False)
 
     # chat = load_chat_tts_model(source="local", local_path="models")
 
