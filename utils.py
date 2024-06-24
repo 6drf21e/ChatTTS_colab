@@ -213,7 +213,7 @@ def normalize_en(text):
     # from tn.english.normalizer import Normalizer
     # normalizer = Normalizer()
     # text = normalizer.normalize(text)
-    # text = remove_english_punctuation(text)
+    text = remove_english_punctuation(text)
     return text
 
 
@@ -222,7 +222,7 @@ def normalize_zh(text):
     # from tn.chinese.normalizer import Normalizer
     # normalizer = Normalizer()
     # text = normalizer.normalize(text)
-    # text = remove_chinese_punctuation(text)
+    text = remove_chinese_punctuation(text)
     text = process_ddd(text)
     return text
 
