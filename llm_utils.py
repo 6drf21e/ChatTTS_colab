@@ -14,9 +14,18 @@ def send_request(client, prompt, text, model):
     text = remove_json_escape_characters(text)
     messages = [{"role": "user", "content": f"{prompt}\n\n{text}"}]
     try:
-        response = client.chat.completions.create(model=model, messages=messages, max_tokens=4096)
+        kwargs = dict(model=model, messages=messages, max_tokens=4096)
+        # MiniMax models require temperature in (0, 1]
+        if model and model.lower().startswith("minimax"):
+            kwargs["temperature"] = 0.7
+        response = client.chat.completions.create(**kwargs)
+        # Strip thinking tags from MiniMax responses
+        content = response.choices[0].message.content
+        if model and model.lower().startswith("minimax") and content:
+            import re as _re
+            content = _re.sub(r'<think>.*?</think>\s*', '', content, flags=_re.DOTALL)
         print(response)
-        return response.choices[0].message.content
+        return content
     except openai.OpenAIError as e:
         print(f"OpenAI API error: {e}")
         return None
