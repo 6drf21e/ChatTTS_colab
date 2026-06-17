@@ -769,7 +769,9 @@ with gr.Blocks() as demo:
                 "gpt-3.5-turbo-0125": ["https://api.openai.com/v1"],
                 "gpt-4o": ["https://api.openai.com/v1"],
                 "deepseek-chat": ["https://api.deepseek.com"],
-                "yi-large": ["https://api.lingyiwanwu.com/v1"]
+                "yi-large": ["https://api.lingyiwanwu.com/v1"],
+                "MiniMax-M2.7": ["https://api.minimax.io/v1"],
+                "MiniMax-M2.5-highspeed": ["https://api.minimax.io/v1"],
             }
             if model in llm_setting:
                 return llm_setting[model][0]
@@ -951,13 +953,14 @@ with gr.Blocks() as demo:
 
 - [https://platform.deepseek.com/](https://platform.deepseek.com/)
 - [https://platform.lingyiwanwu.com/](https://platform.lingyiwanwu.com/)
+- [https://platform.minimaxi.com/](https://platform.minimaxi.com/) (MiniMax M2.7/M2.5-highspeed)
 
                 """)
                 # 申请渠道
 
                 with gr.Row(equal_height=True):
                     # 选择模型 只有 gpt4o deepseek-chat yi-large 三个选项
-                    model_select = gr.Radio(label="选择模型", choices=["gpt-4o", "deepseek-chat", "yi-large"],
+                    model_select = gr.Radio(label="选择模型", choices=["gpt-4o", "deepseek-chat", "yi-large", "MiniMax-M2.7", "MiniMax-M2.5-highspeed"],
                                             value="gpt-4o", interactive=True, )
                 with gr.Row(equal_height=True):
                     openai_api_base_input = gr.Textbox(label="OpenAI API Base URL",
