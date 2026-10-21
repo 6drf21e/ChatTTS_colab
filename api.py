@@ -16,6 +16,7 @@ from utils import batch_split,normalize_zh
 import torch
 import soundfile as sf
 import wave
+import subprocess
 
 from fastapi import FastAPI, Request, HTTPException, Response
 from fastapi.responses import StreamingResponse, JSONResponse
@@ -24,6 +25,7 @@ from starlette.middleware.cors import CORSMiddleware  #引入 CORS中间件模�
 
 #设置允许访问的域名
 origins = ["*"]  #"*"，即为所有。
+SUPPORTED_MEDIA_TYPES = frozenset({"aac", "ogg", "raw", "wav"})
 
 from pydantic import BaseModel
 
@@ -142,6 +144,8 @@ def pack_aac(io_buffer:BytesIO, data:np.ndarray, rate:int):
         'pipe:1'  # 将输出写入管道
     ], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     out, _ = process.communicate(input=data.tobytes())
+    if process.returncode != 0:
+        raise RuntimeError("ffmpeg failed to encode AAC")
     io_buffer.write(out)
     return io_buffer
 
@@ -153,8 +157,10 @@ def pack_audio(io_buffer:BytesIO, data:np.ndarray, rate:int, media_type:str):
         io_buffer = pack_aac(io_buffer, data, rate)
     elif media_type == "wav":
         io_buffer = pack_wav(io_buffer, data, rate)
-    else:
+    elif media_type == "raw":
         io_buffer = pack_raw(io_buffer, data, rate)
+    else:
+        raise ValueError(f"Unsupported media type: {media_type}")
     io_buffer.seek(0)
     return io_buffer
 
@@ -278,6 +284,8 @@ def generate_tts_audio(text_file,seed=2581,speed=1, oral=0, laugh=0, bk=4, min_l
 async def tts_handle(req:dict):
 
     media_type = req["media_type"]
+    if media_type not in SUPPORTED_MEDIA_TYPES:
+        raise HTTPException(status_code=422, detail=f"Unsupported media type: {media_type}")
 
     print(req["streaming"])
     print(req["media_type"])

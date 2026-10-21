@@ -2,3 +2,4 @@ cn2an
 pypinyin
 openai
 WeTextProcessing
+soundfile
